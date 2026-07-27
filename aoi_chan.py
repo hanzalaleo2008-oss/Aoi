@@ -85,7 +85,7 @@ async def toggle_setting(update: Update, context: ContextTypes.DEFAULT_TYPE, key
         )
 
 # -------------------------------------------------------------------
-# 1. Security & Group Guard
+# 1. Security & Guard
 # -------------------------------------------------------------------
 
 async def cmd_forwardblock(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -101,7 +101,7 @@ async def cmd_joineddelete(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'joineddelete', 'Joined Message Delete')
 
 # -------------------------------------------------------------------
-# 2. Tracking & Info System
+# 2. Tracking & Info
 # -------------------------------------------------------------------
 
 async def cmd_track(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -137,21 +137,15 @@ async def cmd_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(info_text, parse_mode='HTML')
 
 # -------------------------------------------------------------------
-# 3. Open / Closed & Timers System
+# 3. Open / Closed System
 # -------------------------------------------------------------------
 
 async def open_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     settings = get_chat_settings(chat_id)
     permissions = ChatPermissions(
-        can_send_messages=True,
-        can_send_audios=True,
-        can_send_documents=True,
-        can_send_photos=True,
-        can_send_videos=True,
-        can_send_video_notes=True,
-        can_send_voice_notes=True,
-        can_send_polls=True,
-        can_send_other_messages=True,
+        can_send_messages=True, can_send_audios=True, can_send_documents=True,
+        can_send_photos=True, can_send_videos=True, can_send_video_notes=True,
+        can_send_voice_notes=True, can_send_polls=True, can_send_other_messages=True,
         can_add_web_page_previews=True
     )
     try:
@@ -163,15 +157,9 @@ async def open_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
 async def close_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     settings = get_chat_settings(chat_id)
     permissions = ChatPermissions(
-        can_send_messages=False,
-        can_send_audios=False,
-        can_send_documents=False,
-        can_send_photos=False,
-        can_send_videos=False,
-        can_send_video_notes=False,
-        can_send_voice_notes=False,
-        can_send_polls=False,
-        can_send_other_messages=False,
+        can_send_messages=False, can_send_audios=False, can_send_documents=False,
+        can_send_photos=False, can_send_videos=False, can_send_video_notes=False,
+        can_send_voice_notes=False, can_send_polls=False, can_send_other_messages=False,
         can_add_web_page_previews=False
     )
     try:
@@ -183,7 +171,6 @@ async def close_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_permission(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'permission', 'Open/Closed Permission')
 
-# Shift + Enter အလှအတိုင်း သိမ်းပေးရန် partition(' ')[2] ပြောင်းထားပါသည်
 async def cmd_setopen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
     chat_id = update.effective_chat.id
@@ -292,7 +279,7 @@ async def cmd_closedtimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"⏰ Daily Closed Timer ကို {parsed_time.strftime('%I:%M %p')} သို့ သတ်မှတ်လိုက်ပါပြီ။")
 
 # -------------------------------------------------------------------
-# 4. Welcome & Goodbye Messages
+# 4. Welcome & Goodbye
 # -------------------------------------------------------------------
 
 async def cmd_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -338,7 +325,7 @@ async def cmd_goodbyetimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ **Usage:** `/goodbyetimer [စက္ကန့်]`", parse_mode='Markdown')
 
 # -------------------------------------------------------------------
-# 5. Store & MLBB ID Tools (Buttons ပါဝင်သော အပိုင်း)
+# 5. Store & MLBB Tools
 # -------------------------------------------------------------------
 
 async def cmd_idcopy_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -391,11 +378,11 @@ async def cmd_idcopy_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"💡 *ဂဏန်းပေါ်ကို Tap နှိပ်ရုံဖြင့် တိုက်ရိုက် Copy ကူးနိုင်ပါသည်။*"
         )
 
-    # Reply Done Buttons စနစ်
     chat_id = update.effective_chat.id
     settings = get_chat_settings(chat_id)
     keyboard = []
 
+    # Button ပေါ်စေမယ့် logic ကို တိကျစွာ ပြင်ဆင်ထားပါသည်
     if settings.get('replydone', False):
         keyboard.append([
             InlineKeyboardButton("Delete ❌", callback_data="delete_msg"),
@@ -449,7 +436,7 @@ async def cmd_deletefilter(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"✅ Filter `{keyword}` ကို ဖျက်လိုက်ပါပြီ။", parse_mode='Markdown')
 
 # -------------------------------------------------------------------
-# 7. Moderation Commands
+# 7. Moderation
 # -------------------------------------------------------------------
 
 async def cmd_ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -491,7 +478,7 @@ async def cmd_resetall(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🔄 Group Settings အားလုံးကို မူလအတိုင်း Reset လုပ်လိုက်ပါပြီ။")
 
 # -------------------------------------------------------------------
-# 8. Fast Deezer Music Downloader & General Commands
+# 8. Music Downloader & General Info (Full Detailed Help Menu)
 # -------------------------------------------------------------------
 
 async def cmd_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -539,19 +526,39 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = (
-        "✨ <b>Aoi Chan Bot - Help Menu</b> ✨\n\n"
-        "• /permission on/off - Group Open/Close System\n"
-        "• /opentimer - Set Open Time\n"
-        "• /closedtimer - Set Close Time\n"
-        "• /idcopy - Copy Game ID\n"
-        "• /replydone - Enable Confirm/Delete Buttons\n"
-        "• /welcome - Toggle Welcome Message\n"
-        "• /music - Download Audio Preview\n"
+        "<b>1. Security & Guard</b>\n"
+        "• /forwardblock on/off\n"
+        "• /linkblock on/off\n"
+        "• /autoban on/off\n"
+        "• /joineddelete on/off\n\n"
+        "<b>2. Tracking & Info</b>\n"
+        "• /track on/off\n"
+        "• /check (Reply)\n"
+        "• /info (Reply)\n\n"
+        "<b>3. Open/Closed System</b>\n"
+        "• /permission on/off\n"
+        "• open | closed (Text)\n"
+        "• /setopen | /setclosed\n"
+        "• /opentimer | /closedtimer\n\n"
+        "<b>4. Welcome & Goodbye</b>\n"
+        "• /welcome on/off | /setwelcome | /welcometimer\n"
+        "• /goodbye on/off | /setgoodbye | /goodbyetimer\n\n"
+        "<b>5. Store & MLBB Tools</b>\n"
+        "• /mlbb | /idcopy (Reply to Customer ID)\n"
+        "• /replydone on/off | /setreplydone\n"
+        "• /recdone on/off | /calculator on/off\n\n"
+        "<b>6. Custom Filters</b>\n"
+        "• /setfilter [keyword] [text]\n"
+        "• /deletefilter [keyword]\n\n"
+        "<b>7. Moderation</b>\n"
+        "• /ban | /unban | /mute | /kick | /resetall\n\n"
+        "<b>8. Music Downloader</b>\n"
+        "• /music [song name]\n"
     )
     await update.message.reply_text(help_text, parse_mode='HTML')
 
 # -------------------------------------------------------------------
-# Event Handlers & Main Initialization
+# Event Message Listener & Main Initialization
 # -------------------------------------------------------------------
 
 async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -598,17 +605,16 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # Register Handlers
-    app.add_handler(CommandHandler("start", cmd_start))
-    app.add_handler(CommandHandler("help", cmd_help))
+    # Register All Handlers
     app.add_handler(CommandHandler("forwardblock", cmd_forwardblock))
     app.add_handler(CommandHandler("linkblock", cmd_linkblock))
     app.add_handler(CommandHandler("autoban", cmd_autoban))
     app.add_handler(CommandHandler("joineddelete", cmd_joineddelete))
+
     app.add_handler(CommandHandler("track", cmd_track))
     app.add_handler(CommandHandler("check", cmd_check))
     app.add_handler(CommandHandler("info", cmd_info))
-    
+
     app.add_handler(CommandHandler("permission", cmd_permission))
     app.add_handler(CommandHandler("setopen", cmd_setopen))
     app.add_handler(CommandHandler("setclosed", cmd_setclosed))
@@ -623,7 +629,7 @@ def main():
     app.add_handler(CommandHandler("goodbyetimer", cmd_goodbyetimer))
 
     app.add_handler(CommandHandler("idcopy", cmd_idcopy_toggle))
-    app.add_handler(CommandHandler(["id", "idcopy"], cmd_idcopy_reply))
+    app.add_handler(CommandHandler(["id", "idcopy", "mlbb"], cmd_idcopy_reply))
     app.add_handler(CommandHandler("replydone", cmd_replydone))
     app.add_handler(CommandHandler("setreplydone", cmd_setreplydone))
     app.add_handler(CommandHandler("recdone", cmd_recdone))
@@ -637,7 +643,10 @@ def main():
     app.add_handler(CommandHandler("mute", cmd_mute))
     app.add_handler(CommandHandler("kick", cmd_kick))
     app.add_handler(CommandHandler("resetall", cmd_resetall))
+
     app.add_handler(CommandHandler("music", cmd_music))
+    app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("help", cmd_help))
 
     app.add_handler(CallbackQueryHandler(handle_buttons))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message_events))
