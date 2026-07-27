@@ -539,7 +539,13 @@ async def cmd_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = "မင်္ဂလာပါရှင်၊ Aoi Chan Bot မှ ကြိုဆိုပါတယ်! ✨\n\nအသေးစိတ် Command များကို ကြည့်ရှုရန် /help ကို နှိပ်ပါရှင်။"
-    await update.message.reply_text(text=welcome_text)
+    
+    keyboard = [
+        [InlineKeyboardButton("👈 [Click Here to View Manual]", url="https://telegra.ph/Your-Manual-Link")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(text=welcome_text, reply_markup=reply_markup)
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = (
