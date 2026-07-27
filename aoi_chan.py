@@ -12,7 +12,7 @@ from telegram.ext import (
 )
 
 # Configuration: Reads token safely from Railway Environment Variable
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8884160612:AAEXBlgw8coEtH3GsxIew9368RMfcbatATI")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8884160612:AAEXBlgw8coELH3GsxIew9368RMLcbaLATi")
 
 # Logging Setup
 logging.basicConfig(
@@ -45,14 +45,15 @@ async def delete_message_job(context: ContextTypes.DEFAULT_TYPE):
         logging.error(f"Failed to delete message: {e}")
 
 # -------------------------------------------------------------------
-# Basic Commands
+# Basic & Help Commands
 # -------------------------------------------------------------------
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler for the /start command with HTML link."""
     welcome_text = (
         "မင်္ဂလာပါရှင်၊ Aoi Chan Bot မှ ကြိုဆိုပါတယ်! ✨\n\n"
-        "စမ်းသပ်ချင်သည့် Command များကို ရိုက်နှိပ်၍ အသုံးပြုနိုင်ပါသည်။\n\n"
+        "စမ်းသပ်ချင်သည့် Command များကို ရိုက်နှိပ်၍ အသုံးပြုနိုင်ပါသည်။\n"
+        "အသေးစိတ် Command များကို သေသပ်စွာ ကြည့်ရှုရန် /help ကို နှိပ်ပါရှင်။\n\n"
         "<b>Aoi Chan usages</b>\n"
         '<a href="https://telegra.ph/Aoi-Chan-Bot--Usage-Guide--Commands-Manual-07-26">👉 [Click Here to View Usages]</a>'
     )
@@ -63,20 +64,49 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         disable_web_page_preview=True
     )
 
+async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Help menu with ordered and categorized commands."""
+    help_text = (
+        "✨ <b>Aoi Chan Bot - Command Directory</b> ✨\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "<b>🤖 1. General Commands (အထွေထွေ)</b>\n"
+        "• /start — Bot စတင်ရန်နှင့် နှုတ်ဆက်စာကြည့်ရန်\n"
+        "• /help — Command လမ်းညွှန်စာရင်း ကြည့်ရှုရန်\n\n"
+        "<b>🎮 2. MLBB & ID Tools (ဂိမ်းဆိုင်ရာ)</b>\n"
+        "• /mlbb — MLBB ID နှင့် Interactive Buttons များထုတ်ရန်\n"
+        "• /idcopy [on/off] — ID Auto-copy Feature ကို ဖွင့်/ပိတ်ရန်\n\n"
+        "<b>🧮 3. Utility Tools (အသုံးဝင်သော မိုဒ်များ)</b>\n"
+        "• /calculator [on/off] — Auto-copy Mono output စနစ် ပြောင်းရန်\n"
+        "• /check — User ၏ History Log ကို စစ်ဆေးရန် (Reply ပြန်၍ သုံးပါ)\n\n"
+        "<b>🛡️ 4. Group Moderation (Admin များနှင့် သက်ဆိုင်သော)</b>\n"
+        "• /ban — Member ကို Group မှ Ban ရန် (Reply)\n"
+        "• /unban — Ban ထားသော Member ကို Unban ပေးရန် (Reply)\n"
+        "• /kick — Member ကို Group မှ ခဏထုတ်ရန် (Reply)\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "💡 <i>Note: [on/off] ပါသော Command များကို စာရိုက်၍ ယှဥ်တွဲအသုံးပြုပေးပါရှင်။</i>"
+    )
+    await update.message.reply_text(
+        text=help_text, 
+        parse_mode='HTML',
+        disable_web_page_preview=True
+    )
+
 async def cmd_calculator(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Toggle calculator output state."""
     chat_id = update.effective_chat.id
     args = context.args
     if args and args[0].lower() in ['on', 'off']:
-        state = args[0].lower() == 'on'
+        state = (args[0].lower() == 'on')
         group_settings.setdefault(chat_id, {})['calculator'] = state
         await update.message.reply_text(
             f"Calculator status: `{state}` (Mono output enabled for auto-copy)", 
             parse_mode='Markdown'
         )
+    else:
+        await update.message.reply_text("❌ Usage: `/calculator on` သို့မဟုတ် `/calculator off` ဟု ရိုက်ပေးပါရှင်။", parse_mode='Markdown')
 
 async def cmd_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Check historical username/name changes recorded since July 11, 2026."""
+    """Check historical username/name changes."""
     user_id = update.effective_user.id
     if update.message.reply_to_message:
         user_id = update.message.reply_to_message.from_user.id
@@ -103,6 +133,8 @@ async def cmd_idcopy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         state = (args[0].lower() == 'on')
         group_settings.setdefault(chat_id, {})['idcopy'] = state
         await update.message.reply_text(f"ID Copy feature set to: {args[0]}")
+    else:
+        await update.message.reply_text("❌ Usage: `/idcopy on` သို့မဟုတ် `/idcopy off` ဟု ရိုက်ပေးပါရှင်။", parse_mode='Markdown')
 
 async def send_mlbb_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send MLBB ID with interactive action buttons."""
@@ -140,28 +172,37 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context):
+        await update.message.reply_text("⚠️ ဒီ Command ကို Admin များသာ အသုံးပြုနိုင်ပါသည်။")
         return
     if update.message.reply_to_message:
         target_user = update.message.reply_to_message.from_user.id
         await context.bot.ban_chat_member(update.effective_chat.id, target_user)
         await update.message.reply_text("Member successfully banned.")
+    else:
+        await update.message.reply_text("⚠️ Ban ချင်သည့် Member ရဲ့ Message ကို Reply ပြန်ပြီး /ban ဟု ရိုက်ပေးပါရှင်။")
 
 async def cmd_unban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context):
+        await update.message.reply_text("⚠️ ဒီ Command ကို Admin များသာ အသုံးပြုနိုင်ပါသည်။")
         return
     if update.message.reply_to_message:
         target_user = update.message.reply_to_message.from_user.id
         await context.bot.unban_chat_member(update.effective_chat.id, target_user)
         await update.message.reply_text("Member unbanned.")
+    else:
+        await update.message.reply_text("⚠️ Unban ချင်သည့် Member ရဲ့ Message ကို Reply ပြန်ပြီး /unban ဟု ရိုက်ပေးပါရှင်။")
 
 async def cmd_kick(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context):
+        await update.message.reply_text("⚠️ ဒီ Command ကို Admin များသာ အသုံးပြုနိုင်ပါသည်။")
         return
     if update.message.reply_to_message:
         target_user = update.message.reply_to_message.from_user.id
         await context.bot.ban_chat_member(update.effective_chat.id, target_user)
         await context.bot.unban_chat_member(update.effective_chat.id, target_user)
         await update.message.reply_text("Member kicked.")
+    else:
+        await update.message.reply_text("⚠️ Kick ချင်သည့် Member ရဲ့ Message ကို Reply ပြန်ပြီး /kick ဟု ရိုက်ပေးပါရှင်။")
 
 # -------------------------------------------------------------------
 # Message Handlers & Automated Actions
@@ -197,6 +238,10 @@ async def handle_joined_delete(update: Update, context: ContextTypes.DEFAULT_TYP
         if update.message.new_chat_members:
             await update.message.delete()
 
+async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Reply when an unrecognized command is sent."""
+    await update.message.reply_text("❌ မသိသေးသော Command ဖြစ်နေပါသည်ရှင်။ Command များကို ကြည့်ရှုရန် /help ကို နှိပ်ပါရှင်။")
+
 # -------------------------------------------------------------------
 # Main Initialization
 # -------------------------------------------------------------------
@@ -206,9 +251,11 @@ def main():
 
     # Register Command Handlers
     app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("calculator", cmd_calculator))
     app.add_handler(CommandHandler("check", cmd_check))
     app.add_handler(CommandHandler("idcopy", cmd_idcopy))
+    app.add_handler(CommandHandler("mlbb", send_mlbb_id))
     app.add_handler(CommandHandler("ban", cmd_ban))
     app.add_handler(CommandHandler("unban", cmd_unban))
     app.add_handler(CommandHandler("kick", cmd_kick))
@@ -218,6 +265,9 @@ def main():
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_joined_delete))
     app.add_handler(MessageHandler(filters.FORWARDED, handle_forward_block))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, track_user_changes))
+    
+    # Unknown Command Handler (Must be registered last)
+    app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
 
     print("Bot is running...")
     app.run_polling(drop_pending_updates=True)
