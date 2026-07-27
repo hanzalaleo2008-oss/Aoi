@@ -85,6 +85,24 @@ async def toggle_setting(update: Update, context: ContextTypes.DEFAULT_TYPE, key
         )
 
 # -------------------------------------------------------------------
+# Helper: Extract Custom Emojis
+# -------------------------------------------------------------------
+def extract_custom_emojis(update: Update) -> list:
+    message = update.message
+    custom_emojis = []
+    if not message:
+        return custom_emojis
+    entities = message.entities or message.caption_entities or []
+    for entity in entities:
+        if entity.type == 'custom_emoji':
+            custom_emojis.append({
+                'emoji_id': entity.custom_emoji_id,
+                'offset': entity.offset,
+                'length': entity.length
+            })
+    return custom_emojis
+
+# -------------------------------------------------------------------
 # 1. Security & Guard
 # -------------------------------------------------------------------
 
@@ -561,13 +579,19 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # -------------------------------------------------------------------
 
 async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or not update.message.text: return
+    if not update.message or not (update.message.text or update.message.caption): 
+        return
     chat_id = update.effective_chat.id
     settings = get_chat_settings(chat_id)
-    text = update.message.text.strip()
+    text = update.message.text or update.message.caption or ""
+
+    # Log custom premium emojis if present
+    premium_emojis = extract_custom_emojis(update)
+    if premium_emojis:
+        logging.info(f"Detected {len(premium_emojis)} custom premium emoji(s) in chat {chat_id}")
 
     if settings.get('permission', False) and await is_admin(update, context):
-        raw_text = text.lower()
+        raw_text = text.lower().strip()
         if raw_text in ["open", "/open"]:
             await open_group(chat_id, context)
             return
@@ -581,9 +605,10 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
             return
 
     if settings.get('calculator', True):
-        if re.match(r'^[0-9\+\-\*\/\(\)\.\s]+$', text) and any(op in text for op in ['+', '-', '*', '/']):
+        clean_text = text.strip()
+        if re.match(r'^[0-9\+\-\*\/\(\)\.\s]+$', clean_text) and any(op in clean_text for op in ['+', '-', '*', '/']):
             try:
-                result = eval(text, {"__builtins__": None}, {})
+                result = eval(clean_text, {"__builtins__": None}, {})
                 formatted = f"{int(result):,}" if isinstance(result, float) and result.is_integer() else f"{result:,}"
                 await update.message.reply_text(f"<code>{formatted}</code> ပါရှင့်!", parse_mode='HTML')
                 return
@@ -594,7 +619,7 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
         msg_text = text.lower()
         for kw, reply in custom_filters[chat_id].items():
             if kw in msg_text:
-                await update.message.reply_text(reply)
+                await update.message.reply_text(reply, parse_mode='HTML')
                 break
 
 def main():
@@ -623,7 +648,7 @@ def main():
     app.add_handler(CommandHandler("goodbyetimer", cmd_goodbyetimer))
 
     app.add_handler(CommandHandler("idcopy", cmd_idcopy_toggle))
-    app.add_handler(CommandHandler(["id", "idcopy", "mlbb"], cmd_idcopy_reply))
+    app.add_handler(CommandHandler(["id", "mlbb"], cmd_idcopy_reply))
     app.add_handler(CommandHandler("replydone", cmd_replydone))
     app.add_handler(CommandHandler("setreplydone", cmd_setreplydone))
     app.add_handler(CommandHandler("recdone", cmd_recdone))
