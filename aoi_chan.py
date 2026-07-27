@@ -36,9 +36,6 @@ PREMIUM_EMOJIS = {
 }
 
 def extract_premium_emoji_text(message) -> str:
-    """
-    Message ထဲတွင်ပါသော Custom Premium Emoji များကို <tg-emoji> HTML tag သို့ အလိုအလျောက် ပြောင်းလဲပေးသည့် Function
-    """
     if not message or not message.text:
         return ""
 
@@ -251,9 +248,6 @@ async def cmd_setgoodbye(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Telegraph Page Generator Function
 # -------------------------------------------------------------------
 async def cmd_telegraph(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Creates a Telegra.ph page from replied text
-    """
     if not update.message.reply_to_message or not update.message.reply_to_message.text:
         await update.message.reply_text("⚠️ Telegraph ပြုလုပ်လိုသော စာကို Reply ပြန်ပြီး `/telegraph [Title]` ဟု ရိုက်ပေးပါရှင် ✨")
         return
