@@ -174,6 +174,9 @@ async def cmd_permission(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'permission', 'Open/Closed Permission')
 
 async def handle_open_closed_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+
     chat_id = update.effective_chat.id
     settings = get_chat_settings(chat_id)
 
@@ -184,6 +187,7 @@ async def handle_open_closed_text(update: Update, context: ContextTypes.DEFAULT_
         return
 
     text = update.message.text.strip().lower()
+
     if text == "open":
         await open_group(chat_id, context)
     elif text == "closed":
@@ -732,10 +736,12 @@ def main():
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
 
+    # Open/Closed Message Handler
+    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'(?i)^(open|closed)$'), handle_open_closed_text))
+
     # Event Handlers
     app.add_handler(CallbackQueryHandler(handle_buttons))
     app.add_handler(ChatMemberHandler(handle_member_status_change, ChatMemberHandler.CHAT_MEMBER))
-    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(open|closed)$'), handle_open_closed_text))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_members))
     app.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_member))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message_events))
@@ -743,7 +749,7 @@ def main():
     # Unknown Command Fallback (Must be added last)
     app.add_handler(MessageHandler(filters.COMMAND, handle_unknown_command))
 
-    print("Aoi Chan Bot with Fast Music API is running...")
+    print("Aoi Chan Bot is running...")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
