@@ -162,4 +162,34 @@ async def cmd_info(update, context):
 # -------------------------------------------------------------------
 # General Commands
 # -------------------------------------------------------------------
-async def cmd
+async def cmd_start(update, context):
+    await update.message.reply_text("မင်္ဂလာပါရှင်၊ Aoi Chan Bot မှ ကြိုဆိုပါတယ်! ✨\n\nအသေးစိတ် Command များကို ကြည့်ရန် /help ကို သုံးပါ။")
+
+async def cmd_help(update, context):
+    help_text = (
+        "✨ <b>Aoi Chan Bot - Help Menu</b> ✨\n\n"
+        "• /permission on/off - Group Open/Close\n"
+        "• /opentimer - Set Open Time\n"
+        "• /closedtimer - Set Close Time\n"
+        "• /idcopy - Copy Game ID\n"
+        "• /replydone - Confirm/Delete Buttons\n"
+        "• /welcome - Toggle Welcome\n"
+        "• /music - Download Audio Preview\n"
+    )
+    await update.message.reply_text(help_text, parse_mode='HTML')
+
+# -------------------------------------------------------------------
+# Main Initialization
+# -------------------------------------------------------------------
+def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    # Register core commands
+    app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("help", cmd_help))
+
+    # Wrong command helper
+    app.add_handler(MessageHandler(filters.COMMAND, wrong_command_helper))
+
+    # Register all other handlers
+    app.add_handler(CommandHandler("forwardblock",
