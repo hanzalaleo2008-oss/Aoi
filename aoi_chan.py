@@ -382,7 +382,6 @@ async def cmd_idcopy_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     settings = get_chat_settings(chat_id)
     keyboard = []
 
-    # Button ပေါ်စေမယ့် logic ကို တိကျစွာ ပြင်ဆင်ထားပါသည်
     if settings.get('replydone', False):
         keyboard.append([
             InlineKeyboardButton("Delete ❌", callback_data="delete_msg"),
@@ -478,7 +477,7 @@ async def cmd_resetall(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🔄 Group Settings အားလုံးကို မူလအတိုင်း Reset လုပ်လိုက်ပါပြီ။")
 
 # -------------------------------------------------------------------
-# 8. Music Downloader & General Info (Full Detailed Help Menu)
+# 8. Music Downloader & General Info (Full Help Menu)
 # -------------------------------------------------------------------
 
 async def cmd_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -567,7 +566,6 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
     settings = get_chat_settings(chat_id)
     text = update.message.text.strip()
 
-    # Open / Closed Text Listener
     if settings.get('permission', False) and await is_admin(update, context):
         raw_text = text.lower()
         if raw_text in ["open", "/open"]:
@@ -577,13 +575,11 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
             await close_group(chat_id, context)
             return
 
-    # Link Block
     if settings.get('linkblock', False) and not await is_admin(update, context):
         if "http://" in text or "https://" in text or "t.me" in text:
             await update.message.delete()
             return
 
-    # Auto Calculator
     if settings.get('calculator', True):
         if re.match(r'^[0-9\+\-\*\/\(\)\.\s]+$', text) and any(op in text for op in ['+', '-', '*', '/']):
             try:
@@ -594,7 +590,6 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
             except Exception:
                 pass
 
-    # Custom Filter
     if chat_id in custom_filters:
         msg_text = text.lower()
         for kw, reply in custom_filters[chat_id].items():
@@ -605,7 +600,6 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # Register All Handlers
     app.add_handler(CommandHandler("forwardblock", cmd_forwardblock))
     app.add_handler(CommandHandler("linkblock", cmd_linkblock))
     app.add_handler(CommandHandler("autoban", cmd_autoban))
