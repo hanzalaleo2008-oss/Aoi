@@ -46,7 +46,6 @@ def get_tg_emoji(emoji_name: str, fallback: str = "✨") -> str:
         return f'<tg-emoji emoji-id="{emoji_id}">{fallback}</tg-emoji>'
     return fallback
 
-# Premium Emoji Parser Helper Function
 def extract_premium_emoji_text(message) -> str:
     """
     Message ထဲတွင်ပါသော Custom Premium Emoji များကို <tg-emoji> HTML tag သို့ အလိုအလျောက် ပြောင်းလဲပေးသည့် Function
@@ -104,7 +103,6 @@ def safe_eval(expr: str):
     parsed = ast.parse(expr, mode='eval')
     return _eval(parsed.body)
 
-# All Command Help Guidelines for Incorrect Usage
 COMMAND_HELP = {
     "forwardblock": "• Usage: `/forwardblock on` သို့မဟုတ် `/forwardblock off`",
     "linkblock": "• Usage: `/linkblock on` သို့မဟုတ် `/linkblock off`",
@@ -776,7 +774,7 @@ async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_T
     await update.message.reply_text(reply_msg, parse_mode='Markdown')
 
 # -------------------------------------------------------------------
-# Message Handler Events
+# Message Handler Events (Updated with Auto Recdone Response)
 # -------------------------------------------------------------------
 async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text: return
@@ -785,6 +783,7 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
     text = update.message.text.strip()
     raw_text = text.lower()
 
+    # 1. Permission Open/Close Checks
     if settings.get('permission', False) and await is_admin(update, context):
         if raw_text in ["open", "/open"]:
             await open_group(chat_id, context)
@@ -793,11 +792,20 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
             await close_group(chat_id, context)
             return
 
+    # 2. Link Block Check
     if settings.get('linkblock', False) and not await is_admin(update, context):
         if "http://" in text or "https://" in text or "t.me" in text:
             await update.message.delete()
             return
 
+    # 3. Custom Filters Check
+    if chat_id in custom_filters:
+        for kw, reply in custom_filters[chat_id].items():
+            if kw in raw_text:
+                await update.message.reply_text(reply, parse_mode='HTML')
+                return
+
+    # 4. Calculator Check
     if settings.get('calculator', True):
         if re.match(r'^[0-9\+\-\*\/\(\)\.\s]+$', text) and any(op in text for op in ['+', '-', '*', '/']):
             try:
@@ -808,11 +816,10 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
             except Exception:
                 pass
 
-    if chat_id in custom_filters:
-        for kw, reply in custom_filters[chat_id].items():
-            if kw in raw_text:
-                await update.message.reply_text(reply, parse_mode='HTML')
-                break
+    # 5. Reaction Done Auto-Reply
+    if settings.get('recdone', False):
+        recdone_text = settings.get('recdone_text', 'Done ပါပြီနော် ✨')
+        await update.message.reply_text(recdone_text, parse_mode='HTML')
 
 # -------------------------------------------------------------------
 # Application Main Function
