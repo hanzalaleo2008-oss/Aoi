@@ -145,7 +145,7 @@ async def cmd_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(info_text, parse_mode='HTML')
 
 # -------------------------------------------------------------------
-# 3. Open / Closed & Timers System
+# 3. Open / Closed & Timers System (With Try-Except & Restrict Error handling)
 # -------------------------------------------------------------------
 
 async def open_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
@@ -156,8 +156,16 @@ async def open_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
         can_send_other_messages=True,
         can_add_web_page_previews=True
     )
-    await context.bot.set_chat_permissions(chat_id, permissions)
-    await context.bot.send_message(chat_id=chat_id, text=settings['open_text'])
+    try:
+        await context.bot.set_chat_permissions(chat_id, permissions)
+        await context.bot.send_message(chat_id=chat_id, text=settings['open_text'])
+    except Exception as e:
+        logging.error(f"Failed to open group: {e}")
+        await context.bot.send_message(
+            chat_id=chat_id, 
+            text=f"⚠️ Group ဖွင့်ရာတွင် အမှားအယွင်း ရှိနေပါသည် (Bot တွင် Restrict Members Admin Permission ရှိမရှိ စစ်ပေးပါ):\n`{e}`", 
+            parse_mode='Markdown'
+        )
 
 async def close_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     settings = get_chat_settings(chat_id)
@@ -167,8 +175,16 @@ async def close_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
         can_send_other_messages=False,
         can_add_web_page_previews=False
     )
-    await context.bot.set_chat_permissions(chat_id, permissions)
-    await context.bot.send_message(chat_id=chat_id, text=settings['closed_text'])
+    try:
+        await context.bot.set_chat_permissions(chat_id, permissions)
+        await context.bot.send_message(chat_id=chat_id, text=settings['closed_text'])
+    except Exception as e:
+        logging.error(f"Failed to close group: {e}")
+        await context.bot.send_message(
+            chat_id=chat_id, 
+            text=f"⚠️ Group ပိတ်ရာတွင် အမှားအယွင်း ရှိနေပါသည် (Bot တွင် Restrict Members Admin Permission ရှိမရှိ စစ်ပေးပါ):\n`{e}`", 
+            parse_mode='Markdown'
+        )
 
 async def cmd_permission(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'permission', 'Open/Closed Permission')
@@ -188,9 +204,9 @@ async def handle_open_closed_text(update: Update, context: ContextTypes.DEFAULT_
 
     text = update.message.text.strip().lower()
 
-    if text == "open":
+    if text in ["open", "/open"]:
         await open_group(chat_id, context)
-    elif text == "closed":
+    elif text in ["closed", "close", "/closed"]:
         await close_group(chat_id, context)
 
 async def cmd_setopen(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -479,7 +495,7 @@ async def cmd_resetall(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🔄 Group Settings အားလုံးကို မူလအတိုင်း Reset လုပ်လိုက်ပါပြီ။")
 
 # -------------------------------------------------------------------
-# 8. Fast API Music Downloader & General Commands
+# 8. Fast Deezer Music Downloader & General Commands
 # -------------------------------------------------------------------
 
 async def cmd_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -737,7 +753,7 @@ def main():
     app.add_handler(CommandHandler("help", cmd_help))
 
     # Open/Closed Message Handler
-    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'(?i)^(open|closed)$'), handle_open_closed_text))
+    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(?i)(open|closed|close)$'), handle_open_closed_text))
 
     # Event Handlers
     app.add_handler(CallbackQueryHandler(handle_buttons))
