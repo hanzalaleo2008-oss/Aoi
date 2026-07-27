@@ -12,10 +12,17 @@ from telegram.ext import (
     MessageHandler,
     CallbackQueryHandler,
     ChatMemberHandler,
-    MessageReactionHandler,
     ContextTypes,
     filters,
 )
+
+# Safe import for MessageReactionHandler to prevent crashes on older PTB versions
+try:
+    from telegram.ext import MessageReactionHandler
+    HAS_REACTION = True
+except ImportError:
+    MessageReactionHandler = None
+    HAS_REACTION = False
 
 # -------------------------------------------------------------------
 # Configuration & Setup
@@ -814,7 +821,11 @@ def main():
 
     # Event Handlers
     app.add_handler(CallbackQueryHandler(handle_buttons))
-    app.add_handler(MessageReactionHandler(handle_reaction_done))
+    
+    # Add Reaction Handler safely if supported
+    if HAS_REACTION and MessageReactionHandler:
+        app.add_handler(MessageReactionHandler(handle_reaction_done))
+
     app.add_handler(ChatMemberHandler(handle_member_status_change, ChatMemberHandler.CHAT_MEMBER))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_members))
     app.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_member))
@@ -823,9 +834,14 @@ def main():
     # Unknown Command Fallback
     app.add_handler(MessageHandler(filters.COMMAND, handle_unknown_command))
 
+    # Build allowed_updates dynamically
+    allowed_updates = ["message", "edited_message", "callback_query", "chat_member"]
+    if HAS_REACTION:
+        allowed_updates.append("message_reaction")
+
     print("Aoi Chan Bot is running...")
     app.run_polling(
-        allowed_updates=["message", "edited_message", "callback_query", "chat_member", "message_reaction"],
+        allowed_updates=allowed_updates,
         drop_pending_updates=True
     )
 
