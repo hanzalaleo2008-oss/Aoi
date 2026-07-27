@@ -3,17 +3,13 @@ import logging
 import re
 import ast
 import operator
-import difflib
-from datetime import datetime, time
-import pytz
 import requests
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
+from telegram import Update, ChatPermissions
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     MessageHandler,
-    CallbackQueryHandler,
     MessageReactionHandler,
     ContextTypes,
     filters,
@@ -32,19 +28,12 @@ logging.basicConfig(
 group_settings = {}
 user_history = {}
 custom_filters = {}
-MM_TZ = pytz.timezone('Asia/Yangon')
 
 PREMIUM_EMOJIS = {
     "sparkle": "5368324170671202286",
     "star": "5368324170671202287",
     "crown": "5368324170671202288",
 }
-
-def get_tg_emoji(emoji_name: str, fallback: str = "✨") -> str:
-    emoji_id = PREMIUM_EMOJIS.get(emoji_name)
-    if emoji_id:
-        return f'<tg-emoji emoji-id="{emoji_id}">{fallback}</tg-emoji>'
-    return fallback
 
 def extract_premium_emoji_text(message) -> str:
     """
@@ -66,13 +55,11 @@ def extract_premium_emoji_text(message) -> str:
     for entity in entities:
         if entity.offset >= text_offset:
             formatted_text += message.text[last_idx:entity.offset]
-            
             if entity.type == "custom_emoji":
                 emoji_char = message.text[entity.offset : entity.offset + entity.length]
                 formatted_text += f'<tg-emoji emoji-id="{entity.custom_emoji_id}">{emoji_char}</tg-emoji>'
             else:
                 formatted_text += message.text[entity.offset : entity.offset + entity.length]
-                
             last_idx = entity.offset + entity.length
 
     formatted_text += message.text[last_idx:]
@@ -103,39 +90,6 @@ def safe_eval(expr: str):
     parsed = ast.parse(expr, mode='eval')
     return _eval(parsed.body)
 
-COMMAND_HELP = {
-    "forwardblock": "• Usage: `/forwardblock on` သို့မဟုတ် `/forwardblock off`",
-    "linkblock": "• Usage: `/linkblock on` သို့မဟုတ် `/linkblock off`",
-    "autoban": "• Usage: `/autoban on` သို့မဟုတ် `/autoban off`",
-    "joineddelete": "• Usage: `/joineddelete on` သို့မဟုတ် `/joineddelete off`",
-    "track": "• Usage: `/track on` သို့မဟုတ် `/track off`",
-    "check": "• Usage: User စာကို Reply ပြန်ပြီး `/check` ဟု ရိုက်ပါ။",
-    "info": "• Usage: User စာကို Reply ပြန်ပြီး `/info` ဟု ရိုက်ပါ။",
-    "permission": "• Usage: `/permission on` သို့မဟုတ် `/permission off`",
-    "setopen": "• Usage: `/setopen [စာသား]`",
-    "setclosed": "• Usage: `/setclosed [စာသား]`",
-    "welcome": "• Usage: `/welcome on` သို့မဟုတ် `/welcome off`",
-    "setwelcome": "• Usage: `/setwelcome [စာသား]`",
-    "goodbye": "• Usage: `/goodbye on` သို့မဟုတ် `/goodbye off`",
-    "setgoodbye": "• Usage: `/setgoodbye [စာသား]`",
-    "mlbb": "• Usage: Customer ID စာကို Reply ပြန်ပြီး `/mlbb` သို့မဟုတ် `/idcopy` ဟု ရိုက်ပါ။",
-    "idcopy": "• Usage: Customer ID စာကို Reply ပြန်ပြီး `/idcopy` သို့မဟုတ် `/mlbb` ဟု ရိုက်ပါ။",
-    "idcopytoggle": "• Usage: `/idcopytoggle on` သို့မဟုတ် `/idcopytoggle off`",
-    "replydone": "• Usage: `/replydone on` သို့မဟုတ် `/replydone off`",
-    "setreplydone": "• Usage: `/setreplydone [စာသား]`",
-    "recdone": "• Usage: `/recdone on` သို့မဟုတ် `/recdone off`",
-    "setrecdone": "• Usage: `/setrecdone [စာသား]`\n💡 Example: `/setrecdone Order Completed! Thank you ❤️`",
-    "calculator": "• Usage: `/calculator on` သို့မဟုတ် `/calculator off`",
-    "getid": "• Usage: Custom Emoji ပါသော စာကို Reply ပြန်ပြီး `/getid` ဟု ရိုက်ပါ။",
-    "setfilter": "• Usage: `/setfilter [keyword] [text]`",
-    "deletefilter": "• Usage: `/deletefilter [keyword]`",
-    "ban": "• Usage: Member Message ကို Reply ပြီး `/ban` ဟု ရိုက်ပါ။",
-    "unban": "• Usage: Member Message ကို Reply ပြီး `/unban` ဟု ရိုက်ပါ။",
-    "mute": "• Usage: Member Message ကို Reply ပြီး `/mute` ဟု ရိုက်ပါ။",
-    "kick": "• Usage: Member Message ကို Reply ပြီး `/kick` ဟု ရိုက်ပါ။",
-    "resetall": "• Usage: `/resetall` (Group Settings အားလုံး Reset လုပ်ရန်)",
-}
-
 def get_chat_settings(chat_id: int) -> dict:
     return group_settings.setdefault(chat_id, {
         'forwardblock': False,
@@ -153,7 +107,6 @@ def get_chat_settings(chat_id: int) -> dict:
         'goodbye_text': "{name} ထွက်သွားပါပြီ 😢",
         'idcopy': True,
         'replydone': False,
-        'replydone_text': "ထည့်ပြီးပါပြီရှင့်✔️\nကျေးဇူးတင်ပါတယ်ရှင့်\nနောက်လည်းလာခဲ့ပါအုံးနော်",
         'recdone': False,
         'recdone_text': "Order Completed! Thank you ❤️",
         'calculator': True,
@@ -167,8 +120,7 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     try:
         member = await context.bot.get_chat_member(chat_id, user_id)
         return member.status in ['creator', 'administrator']
-    except Exception as e:
-        logging.error(f"Error checking admin status: {e}")
+    except Exception:
         return False
 
 async def toggle_setting(update: Update, context: ContextTypes.DEFAULT_TYPE, key: str, name: str):
@@ -183,21 +135,28 @@ async def toggle_setting(update: Update, context: ContextTypes.DEFAULT_TYPE, key
         settings[key] = state
         await update.message.reply_text(f"✅ {name} စနစ်ကို `{state}` သို့ ပြောင်းလဲလိုက်ပါပြီရှင် ✨", parse_mode='Markdown')
     else:
-        guide = COMMAND_HELP.get(key, f"• Usage: `/{key} on` သို့မဟုတ် `/{key} off`")
-        await update.message.reply_text(f"⚠️ **အသုံးပြုပုံ လွဲမှားနေပါတယ်နော်!**\n\n{guide}", parse_mode='Markdown')
+        await update.message.reply_text(f"⚠️ Usage: `/{key} on` သို့မဟုတ် `/{key} off`", parse_mode='Markdown')
 
 # -------------------------------------------------------------------
 # Security & Protection Commands
 # -------------------------------------------------------------------
-async def cmd_forwardblock(update: Update, context: ContextTypes.DEFAULT_TYPE): await toggle_setting(update, context, 'forwardblock', 'Forward Block')
-async def cmd_linkblock(update: Update, context: ContextTypes.DEFAULT_TYPE): await toggle_setting(update, context, 'linkblock', 'Link Block')
-async def cmd_autoban(update: Update, context: ContextTypes.DEFAULT_TYPE): await toggle_setting(update, context, 'autoban', 'Auto-Ban Left Members')
-async def cmd_joineddelete(update: Update, context: ContextTypes.DEFAULT_TYPE): await toggle_setting(update, context, 'joineddelete', 'Joined Message Delete')
+async def cmd_forwardblock(update: Update, context: ContextTypes.DEFAULT_TYPE): 
+    await toggle_setting(update, context, 'forwardblock', 'Forward Block')
+
+async def cmd_linkblock(update: Update, context: ContextTypes.DEFAULT_TYPE): 
+    await toggle_setting(update, context, 'linkblock', 'Link Block')
+
+async def cmd_autoban(update: Update, context: ContextTypes.DEFAULT_TYPE): 
+    await toggle_setting(update, context, 'autoban', 'Auto-Ban Left Members')
+
+async def cmd_joineddelete(update: Update, context: ContextTypes.DEFAULT_TYPE): 
+    await toggle_setting(update, context, 'joineddelete', 'Joined Message Delete')
 
 # -------------------------------------------------------------------
-# Tracking Commands
+# Tracking & Info Commands
 # -------------------------------------------------------------------
-async def cmd_track(update: Update, context: ContextTypes.DEFAULT_TYPE): await toggle_setting(update, context, 'track', 'User Track')
+async def cmd_track(update: Update, context: ContextTypes.DEFAULT_TYPE): 
+    await toggle_setting(update, context, 'track', 'User Track')
 
 async def cmd_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -206,11 +165,11 @@ async def cmd_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     history = user_history.get(user_id, [])
     if not history:
-        await update.message.reply_text("No history recorded starting from 11 July 2026.")
+        await update.message.reply_text("No history recorded.")
         return
 
     text = "<b>User History Log:</b>\n"
-    for item in history[-10:]: # Show last 10 records
+    for item in history[-10:]:
         text += f"• Name: {item['first_name']} | @{item['username']}\n"
     await update.message.reply_text(text, parse_mode='HTML')
 
@@ -248,7 +207,8 @@ async def close_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Failed to close group: {e}")
 
-async def cmd_permission(update: Update, context: ContextTypes.DEFAULT_TYPE): await toggle_setting(update, context, 'permission', 'Open/Closed Permission')
+async def cmd_permission(update: Update, context: ContextTypes.DEFAULT_TYPE): 
+    await toggle_setting(update, context, 'permission', 'Open/Closed Permission')
 
 async def cmd_setopen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
@@ -267,28 +227,70 @@ async def cmd_setclosed(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # -------------------------------------------------------------------
 # Welcome & Goodbye Management
 # -------------------------------------------------------------------
-async def cmd_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE): await toggle_setting(update, context, 'welcome', 'Welcome Message')
-async def cmd_goodbye(update: Update, context: ContextTypes.DEFAULT_TYPE): await toggle_setting(update, context, 'goodbye', 'Goodbye Message')
+async def cmd_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE): 
+    await toggle_setting(update, context, 'welcome', 'Welcome Message')
+
+async def cmd_goodbye(update: Update, context: ContextTypes.DEFAULT_TYPE): 
+    await toggle_setting(update, context, 'goodbye', 'Goodbye Message')
 
 async def cmd_setwelcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
     formatted_text = extract_premium_emoji_text(update.message)
     if formatted_text:
         get_chat_settings(update.effective_chat.id)['welcome_text'] = formatted_text
-        await update.message.reply_text("✅ Welcome Message ကို ပြောင်းလဲပြီးပါပြီရှင် ✨", parse_mode='HTML')
+        await update.message.reply_text("✅ Welcome Message ပြောင်းပြီးပါပြီရှင် ✨", parse_mode='HTML')
 
 async def cmd_setgoodbye(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
     formatted_text = extract_premium_emoji_text(update.message)
     if formatted_text:
         get_chat_settings(update.effective_chat.id)['goodbye_text'] = formatted_text
-        await update.message.reply_text("✅ Goodbye Message ကို ပြောင်းလဲပြီးပါပြီရှင် ✨", parse_mode='HTML')
+        await update.message.reply_text("✅ Goodbye Message ပြောင်းပြီးပါပြီရှင် ✨", parse_mode='HTML')
+
+# -------------------------------------------------------------------
+# Telegraph Page Generator Function
+# -------------------------------------------------------------------
+async def cmd_telegraph(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Creates a Telegra.ph page from replied text
+    """
+    if not update.message.reply_to_message or not update.message.reply_to_message.text:
+        await update.message.reply_text("⚠️ Telegraph ပြုလုပ်လိုသော စာကို Reply ပြန်ပြီး `/telegraph [Title]` ဟု ရိုက်ပေးပါရှင် ✨")
+        return
+
+    title = " ".join(context.args) if context.args else "Aoi Chan Note"
+    content_text = update.message.reply_to_message.text
+
+    try:
+        acc_res = requests.get("https://api.telegra.ph/createAccount", params={"short_name": "AoiChan"}).json()
+        access_token = acc_res['result']['access_token']
+
+        content_json = [{"tag": "p", "children": [content_text]}]
+
+        page_res = requests.post("https://api.telegra.ph/createPage", data={
+            "access_token": access_token,
+            "title": title,
+            "content": str(content_json).replace("'", '"'),
+            "return_content": "false"
+        }).json()
+
+        if page_res.get('ok'):
+            url = page_res['result']['url']
+            await update.message.reply_text(f"🔗 <b>Telegraph Link ဖန်တီးပြီးပါပြီ:</b>\n{url}", parse_mode='HTML')
+        else:
+            await update.message.reply_text("❌ Telegraph Link ဖန်တီးရာတွင် အဆင်မပြေပါရှင်။")
+    except Exception as e:
+        logging.error(f"Telegraph error: {e}")
+        await update.message.reply_text("❌ Telegraph Service ချိတ်ဆက်မှု အဆင်မပြေပါရှင်။")
 
 # -------------------------------------------------------------------
 # Store & MLBB Commands
 # -------------------------------------------------------------------
-async def cmd_idcopy_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE): await toggle_setting(update, context, 'idcopy', 'ID Copy System')
-async def cmd_replydone(update: Update, context: ContextTypes.DEFAULT_TYPE): await toggle_setting(update, context, 'replydone', 'Reply Done Buttons')
+async def cmd_idcopy_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE): 
+    await toggle_setting(update, context, 'idcopy', 'ID Copy System')
+
+async def cmd_replydone(update: Update, context: ContextTypes.DEFAULT_TYPE): 
+    await toggle_setting(update, context, 'replydone', 'Reply Done Buttons')
 
 async def cmd_recdone(update: Update, context: ContextTypes.DEFAULT_TYPE): 
     await toggle_setting(update, context, 'recdone', 'Reaction Auto Done')
@@ -304,13 +306,14 @@ async def cmd_setrecdone(update: Update, context: ContextTypes.DEFAULT_TYPE):
         get_chat_settings(update.effective_chat.id)['recdone_text'] = formatted_text
         await update.message.reply_text("✅ Reaction Done Message ကို ပြောင်းလဲပြီးပါပြီရှင် ✨", parse_mode='HTML')
     else:
-        await update.message.reply_text("⚠️ **Usage:** `/setrecdone Order completed! Thank you ❤️`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ Usage: `/setrecdone Order completed! Thank you ❤️`", parse_mode='Markdown')
 
-async def cmd_calculator(update: Update, context: ContextTypes.DEFAULT_TYPE): await toggle_setting(update, context, 'calculator', 'Calculator Auto-math')
+async def cmd_calculator(update: Update, context: ContextTypes.DEFAULT_TYPE): 
+    await toggle_setting(update, context, 'calculator', 'Calculator Auto-math')
 
 async def cmd_idcopy_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message.reply_to_message or not update.message.reply_to_message.text:
-        await update.message.reply_text("⚠️ Customer ၏ Game ID စာကို Reply ပြန်ပြီး `/idcopy` ဟု အသုံးပြုပါရှင် 💕", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ Customer ၏ Game ID စာကို Reply ပြန်ပြီး `/idcopy` ဟု အသုံးပြုပါရှင် 💕")
         return
 
     text = update.message.reply_to_message.text
@@ -383,7 +386,7 @@ async def cmd_kick(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"👞 {user.first_name} ကို Kick လိုက်ပါပြီရှင်။")
 
 # -------------------------------------------------------------------
-# Message Reaction Handler (Safeguarded against None type errors)
+# Reactions Handler
 # -------------------------------------------------------------------
 async def handle_reaction_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reaction = update.message_reaction
@@ -394,7 +397,6 @@ async def handle_reaction_events(update: Update, context: ContextTypes.DEFAULT_T
 
     if not settings.get('recdone', False): return
 
-    # Check if user who reacted is Admin safely
     user_id = reaction.user.id if reaction.user else None
     if user_id:
         try:
@@ -402,7 +404,7 @@ async def handle_reaction_events(update: Update, context: ContextTypes.DEFAULT_T
             if member.status not in ['creator', 'administrator']:
                 return
         except Exception as e:
-            logging.error(f"Reaction admin check failed: {e}")
+            logging.error(f"Reaction admin check error: {e}")
             return
 
     if reaction.new_reaction:
@@ -420,7 +422,7 @@ async def handle_reaction_events(update: Update, context: ContextTypes.DEFAULT_T
             logging.error(f"Failed to send recdone reaction reply: {e}")
 
 # -------------------------------------------------------------------
-# Message Events Handler
+# General Message Handler
 # -------------------------------------------------------------------
 async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text: return
@@ -429,12 +431,11 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
     text = update.message.text.strip()
     raw_text = text.lower()
 
-    # Track User Details safely
     user = update.effective_user
     if user:
         u_list = user_history.setdefault(user.id, [])
         u_list.append({'first_name': user.first_name, 'username': user.username or ''})
-        if len(u_list) > 50: # Limit history size per user
+        if len(u_list) > 50:
             u_list.pop(0)
 
     if settings.get('permission', False) and await is_admin(update, context):
@@ -470,11 +471,19 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("မင်္ဂလာပါရှင်၊ Aoi Chan Bot မှ ကြိုဆိုပါတယ်! ✨\nCommands များကို /help တွင် ကြည့်နိုင်ပါတယ်ရှင်။")
 
+# -------------------------------------------------------------------
+# Help Menu (Telegraph Link - "click here")
+# -------------------------------------------------------------------
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("<b>Aoi Chan Commands List:</b>\n\n• /recdone on/off\n• /setrecdone [text]\n• /idcopy (Reply to msg)\n• /linkblock on/off\n• /setfilter [key] [text]", parse_mode='HTML')
+    help_text = (
+        "<b>✨ Aoi Chan Bot Manual ✨</b>\n\n"
+        "Commands နှင့် အသုံးပြုပုံ အပြည့်အစုံကို အောက်ပါ link တွင် ကြည့်ရှုနိုင်ပါသည်ရှင်:\n"
+        '👉 <a href="https://telegra.ph/Aoi-Chan-Bot--Usage-Guide--Commands-Manual-07-26">click here</a>'
+    )
+    await update.message.reply_text(help_text, parse_mode='HTML', disable_web_page_preview=False)
 
 # -------------------------------------------------------------------
-# Application Main Function
+# Main Setup & Application Builder
 # -------------------------------------------------------------------
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -500,6 +509,7 @@ def main():
     app.add_handler(CommandHandler("goodbye", cmd_goodbye))
     app.add_handler(CommandHandler("setgoodbye", cmd_setgoodbye))
 
+    app.add_handler(CommandHandler("telegraph", cmd_telegraph))
     app.add_handler(CommandHandler("idcopytoggle", cmd_idcopy_toggle))
     app.add_handler(CommandHandler(["mlbb", "id", "idcopy"], cmd_idcopy_reply))
     app.add_handler(CommandHandler("replydone", cmd_replydone))
@@ -515,13 +525,9 @@ def main():
     app.add_handler(CommandHandler("mute", cmd_mute))
     app.add_handler(CommandHandler("kick", cmd_kick))
 
-    # Reaction Event Listener
     app.add_handler(MessageReactionHandler(handle_reaction_events))
-
-    # General Text Message Listener
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message_events))
 
-    # Polling Listener
     app.run_polling(allowed_updates=["message", "edited_message", "message_reaction"])
 
 if __name__ == "__main__":
