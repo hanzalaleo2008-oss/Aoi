@@ -21,7 +21,6 @@ from telegram.ext import (
 # -------------------------------------------------------------------
 # Configuration & Setup
 # -------------------------------------------------------------------
-# ⚠️ Token အသစ်ကို BotFather ထံမှ ပြန်ယူ၍ ဒီနေရာတွင် အစားထိုးပေးပါနော်
 BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
 
 logging.basicConfig(
@@ -34,25 +33,20 @@ user_history = {}
 custom_filters = {}
 MM_TZ = pytz.timezone('Asia/Yangon')
 
-# -------------------------------------------------------------------
-# Premium Emoji Database & Helper
-# -------------------------------------------------------------------
+# Telegram Premium Emoji Database
 PREMIUM_EMOJIS = {
-    "sparkle": "5368324170671202286",  # Sparkle Custom Emoji ID
-    "star": "5368324170671202287",     # Star Custom Emoji ID
-    "crown": "5368324170671202288",    # Crown Custom Emoji ID
+    "sparkle": "5368324170671202286",
+    "star": "5368324170671202287",
+    "crown": "5368324170671202288",
 }
 
 def get_tg_emoji(emoji_name: str, fallback: str = "✨") -> str:
-    """Telegram Premium Emoji ID ဖြင့် HTML Tag ပြန်ပေးမည့် Helper Function"""
     emoji_id = PREMIUM_EMOJIS.get(emoji_name)
     if emoji_id:
         return f'<tg-emoji emoji-id="{emoji_id}">{fallback}</tg-emoji>'
     return fallback
 
-# -------------------------------------------------------------------
-# Safe Math Calculator Evaluator (No eval vulnerability)
-# -------------------------------------------------------------------
+# Safe Arithmetic Evaluator
 OPERATORS = {
     ast.Add: operator.add,
     ast.Sub: operator.sub,
@@ -62,11 +56,10 @@ OPERATORS = {
 }
 
 def safe_eval(expr: str):
-    """Safely evaluate basic arithmetic expressions without eval()."""
     def _eval(node):
-        if isinstance(node, ast.Constant):  # Python 3.8+ numbers
+        if isinstance(node, ast.Constant):
             return node.value
-        elif isinstance(node, ast.Num):     # Legacy fallback
+        elif isinstance(node, ast.Num):
             return node.n
         elif isinstance(node, ast.BinOp):
             return OPERATORS[type(node.op)](_eval(node.left), _eval(node.right))
@@ -78,36 +71,42 @@ def safe_eval(expr: str):
     parsed = ast.parse(expr, mode='eval')
     return _eval(parsed.body)
 
-# -------------------------------------------------------------------
-# Command Guidelines Database
-# -------------------------------------------------------------------
+# All Command Help Guidelines for Incorrect Usage
 COMMAND_HELP = {
-    "permission": "• Usage: `/permission on` သို့မဟုတ် `/permission off`\n💡 Example: `/permission on` (Group Open/Close စနစ်ကို အလုပ်လုပ်ခွင့်ပေးသည်)",
-    "opentimer": "• Usage: `/opentimer [အချိန်]`\n💡 Example: `/opentimer 8:00 am` (မနက် ၈ နာရီမှာ Group အလိုအလျောက် ဖွင့်မည်)",
-    "closedtimer": "• Usage: `/closedtimer [အချိန်]`\n💡 Example: `/closedtimer 11:00 pm` (ည ၁၁ နာရီမှာ Group အလိုအလျောက် ပိတ်မည်)",
-    "setopen": "• Usage: `/setopen [စာသား]`\n💡 Example: `/setopen Group ဖွင့်လိုက်ပါပြီရှင်`",
-    "setclosed": "• Usage: `/setclosed [စာသား]`\n💡 Example: `/setclosed Group ခဏပိတ်ထားပါသည်ရှင်`",
-    "idcopy": "• Usage: Game ID စာကို Reply ပြန်ပြီး `/idcopy` သို့မဟုတ် `/id` နှိပ်ပါ။\n💡 Example: `/id`",
-    "idcopytoggle": "• Usage: `/idcopytoggle on` သို့မဟုတ် `/idcopytoggle off`",
-    "replydone": "• Usage: `/replydone on` သို့မဟုတ် `/replydone off`\n💡 Example: `/replydone on`",
-    "setreplydone": "• Usage: `/setreplydone [စာသား]`\n💡 Example: `/setreplydone ဝယ်ယူမှုကို အတည်ပြုပြီးပါပြီရှင့်`",
-    "setfilter": "• Usage: `/setfilter [keyword] [reply_text]`\n💡 Example: `/setfilter kpay 09123456789`",
-    "deletefilter": "• Usage: `/deletefilter [keyword]`\n💡 Example: `/deletefilter kpay`",
-    "music": "• Usage: `/music [သီချင်းနာမည်]`\n💡 Example: `/music Blue Mingalabar`",
-    "ban": "• Usage: Member ရဲ့ စာကို Reply ပြန်ပြီး `/ban` ဟု ရိုက်ပါ။",
-    "unban": "• Usage: Member ရဲ့ စာကို Reply ပြန်ပြီး `/unban` ဟု ရိုက်ပါ။",
-    "mute": "• Usage: Member ရဲ့ စာကို Reply ပြန်ပြီး `/mute` ဟု ရိုက်ပါ။",
-    "kick": "• Usage: Member ရဲ့ စာကို Reply ပြန်ပြီး `/kick` ဟု ရိုက်ပါ။",
-    "linkblock": "• Usage: `/linkblock on` သို့မဟုတ် `/linkblock off`",
     "forwardblock": "• Usage: `/forwardblock on` သို့မဟုတ် `/forwardblock off`",
+    "linkblock": "• Usage: `/linkblock on` သို့မဟုတ် `/linkblock off`",
     "autoban": "• Usage: `/autoban on` သို့မဟုတ် `/autoban off`",
     "joineddelete": "• Usage: `/joineddelete on` သို့မဟုတ် `/joineddelete off`",
-    "calculator": "• Usage: `/calculator on` သို့မဟုတ် `/calculator off`",
-    "welcome": "• Usage: `/welcome on` သို့မဟုတ် `/welcome off`",
-    "goodbye": "• Usage: `/goodbye on` သို့မဟုတ် `/goodbye off`",
     "track": "• Usage: `/track on` သို့မဟုတ် `/track off`",
-    "info": "• Usage: `/info` သို့မဟုတ် Member Message ကို Reply ပြီး `/info` နှိပ်ပါ။",
-    "getid": "• Usage: Premium Emoji ပါသော Message ကို Reply ပြီး `/getid` ဟု ရိုက်ပါ။",
+    "check": "• Usage: User စာကို Reply ပြန်ပြီး `/check` ဟု ရိုက်ပါ။",
+    "info": "• Usage: User စာကို Reply ပြန်ပြီး `/info` ဟု ရိုက်ပါ။",
+    "permission": "• Usage: `/permission on` သို့မဟုတ် `/permission off`",
+    "setopen": "• Usage: `/setopen [စာသား]`\n💡 Example: `/setopen Group ဖွင့်လိုက်ပါပြီရှင်`",
+    "setclosed": "• Usage: `/setclosed [စာသား]`\n💡 Example: `/setclosed Group ခဏပိတ်ထားပါသည်ရှင်`",
+    "opentimer": "• Usage: `/opentimer [အချိန်]`\n💡 Example: `/opentimer 8:00 am`",
+    "closedtimer": "• Usage: `/closedtimer [အချိန်]`\n💡 Example: `/closedtimer 11:00 pm`",
+    "welcome": "• Usage: `/welcome on` သို့မဟုတ် `/welcome off`",
+    "setwelcome": "• Usage: `/setwelcome [စာသား]`",
+    "welcometimer": "• Usage: `/welcometimer [စက္ကန့်]`",
+    "goodbye": "• Usage: `/goodbye on` သို့မဟုတ် `/goodbye off`",
+    "setgoodbye": "• Usage: `/setgoodbye [စာသား]`",
+    "goodbyetimer": "• Usage: `/goodbyetimer [စက္ကန့်]`",
+    "mlbb": "• Usage: Customer ID စာကို Reply ပြန်ပြီး `/mlbb` သို့မဟုတ် `/idcopy` ဟု ရိုက်ပါ။",
+    "idcopy": "• Usage: Customer ID စာကို Reply ပြန်ပြီး `/idcopy` သို့မဟုတ် `/mlbb` ဟု ရိုက်ပါ။",
+    "idcopytoggle": "• Usage: `/idcopytoggle on` သို့မဟုတ် `/idcopytoggle off`",
+    "replydone": "• Usage: `/replydone on` သို့မဟုတ် `/replydone off`",
+    "setreplydone": "• Usage: `/setreplydone [စာသား]`",
+    "recdone": "• Usage: `/recdone on` သို့မဟုတ် `/recdone off`",
+    "calculator": "• Usage: `/calculator on` သို့မဟုတ် `/calculator off`",
+    "getid": "• Usage: Custom Emoji ပါသော စာကို Reply ပြန်ပြီး `/getid` ဟု ရိုက်ပါ။",
+    "setfilter": "• Usage: `/setfilter [keyword] [text]`\n💡 Example: `/setfilter kpay 09123456789`",
+    "deletefilter": "• Usage: `/deletefilter [keyword]`",
+    "ban": "• Usage: Member Message ကို Reply ပြီး `/ban` ဟု ရိုက်ပါ။",
+    "unban": "• Usage: Member Message ကို Reply ပြီး `/unban` ဟု ရိုက်ပါ။",
+    "mute": "• Usage: Member Message ကို Reply ပြီး `/mute` ဟု ရိုက်ပါ။",
+    "kick": "• Usage: Member Message ကို Reply ပြီး `/kick` ဟု ရိုက်ပါ။",
+    "resetall": "• Usage: `/resetall` (Group Settings အားလုံး Reset လုပ်ရန်)",
+    "music": "• Usage: `/music [သီချင်းနာမည်]`\n💡 Example: `/music Blue Mingalabar`",
 }
 
 def get_chat_settings(chat_id: int) -> dict:
@@ -146,7 +145,7 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
 
 async def toggle_setting(update: Update, context: ContextTypes.DEFAULT_TYPE, key: str, name: str):
     if not await is_admin(update, context):
-        await update.message.reply_text("⚠️ ဒီ Command ကို Admin များသာ အသုံးပြုနိုင်ပါသည်။")
+        await update.message.reply_text("⚠️ ဒီ Command ကို Admin များသာ အသုံးပြုနိုင်ပါတယ်နော် ✨")
         return
     chat_id = update.effective_chat.id
     args = context.args
@@ -154,20 +153,19 @@ async def toggle_setting(update: Update, context: ContextTypes.DEFAULT_TYPE, key
     if args and args[0].lower() in ['on', 'off']:
         state = (args[0].lower() == 'on')
         settings[key] = state
-        await update.message.reply_text(f"✅ {name} စနစ်ကို `{state}` သို့ ပြောင်းလဲလိုက်ပါပြီ။", parse_mode='Markdown')
+        await update.message.reply_text(f"✅ {name} စနစ်ကို `{state}` သို့ ပြောင်းလဲလိုက်ပါပြီရှင် ✨", parse_mode='Markdown')
     else:
+        guide = COMMAND_HELP.get(key, f"• Usage: `/{key} on` သို့မဟုတ် `/{key} off`")
         await update.message.reply_text(
-            f"❌ **Command အသုံးပြုပုံ မှားယွင်းနေပါသည်။**\n\n"
-            f"💡 **Example:**\n"
-            f"• `/{key} on` (စနစ်ဖွင့်ရန်)\n"
-            f"• `/{key} off` (စနစ်ပိတ်ရန်)",
+            f"⚠️ **အသုံးပြုပုံ လွဲမှားနေပါတယ်နော်!**\n\n"
+            f"{guide}\n\n"
+            f"စစ်ဆေးပြီး ပြန်လည်ရိုက်ပေးပါဦးနော် 💕",
             parse_mode='Markdown'
         )
 
 # -------------------------------------------------------------------
-# 1. Security & Group Guard
+# 1. Security & Guard
 # -------------------------------------------------------------------
-
 async def cmd_forwardblock(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'forwardblock', 'Forward Block')
 
@@ -181,9 +179,8 @@ async def cmd_joineddelete(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'joineddelete', 'Joined Message Delete')
 
 # -------------------------------------------------------------------
-# 2. Tracking & Info System
+# 2. Tracking & Info
 # -------------------------------------------------------------------
-
 async def cmd_track(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'track', 'User Track')
 
@@ -217,21 +214,14 @@ async def cmd_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(info_text, parse_mode='HTML')
 
 # -------------------------------------------------------------------
-# 3. Open / Closed & Timers System
+# 3. Open/Closed System
 # -------------------------------------------------------------------
-
 async def open_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     settings = get_chat_settings(chat_id)
     permissions = ChatPermissions(
-        can_send_messages=True,
-        can_send_audios=True,
-        can_send_documents=True,
-        can_send_photos=True,
-        can_send_videos=True,
-        can_send_video_notes=True,
-        can_send_voice_notes=True,
-        can_send_polls=True,
-        can_send_other_messages=True,
+        can_send_messages=True, can_send_audios=True, can_send_documents=True,
+        can_send_photos=True, can_send_videos=True, can_send_video_notes=True,
+        can_send_voice_notes=True, can_send_polls=True, can_send_other_messages=True,
         can_add_web_page_previews=True
     )
     try:
@@ -243,15 +233,9 @@ async def open_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
 async def close_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     settings = get_chat_settings(chat_id)
     permissions = ChatPermissions(
-        can_send_messages=False,
-        can_send_audios=False,
-        can_send_documents=False,
-        can_send_photos=False,
-        can_send_videos=False,
-        can_send_video_notes=False,
-        can_send_voice_notes=False,
-        can_send_polls=False,
-        can_send_other_messages=False,
+        can_send_messages=False, can_send_audios=False, can_send_documents=False,
+        can_send_photos=False, can_send_videos=False, can_send_video_notes=False,
+        can_send_voice_notes=False, can_send_polls=False, can_send_other_messages=False,
         can_add_web_page_previews=False
     )
     try:
@@ -265,23 +249,21 @@ async def cmd_permission(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_setopen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
-    chat_id = update.effective_chat.id
     text = update.message.text.partition(' ')[2].strip()
     if text:
-        get_chat_settings(chat_id)['open_text'] = text
-        await update.message.reply_text("✅ Open Message ပြောင်းလဲပြီးပါပြီ။")
+        get_chat_settings(update.effective_chat.id)['open_text'] = text
+        await update.message.reply_text("✅ Open Message ပြောင်းလဲပြီးပါပြီရှင် ✨")
     else:
-        await update.message.reply_text("❌ **Usage:** `/setopen [စာသား]`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ **Usage:** `/setopen [စာသား]`\n💡 Example: `/setopen Group ဖွင့်လိုက်ပါပြီရှင်`", parse_mode='Markdown')
 
 async def cmd_setclosed(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
-    chat_id = update.effective_chat.id
     text = update.message.text.partition(' ')[2].strip()
     if text:
-        get_chat_settings(chat_id)['closed_text'] = text
-        await update.message.reply_text("✅ Closed Message ပြောင်းလဲပြီးပါပြီ။")
+        get_chat_settings(update.effective_chat.id)['closed_text'] = text
+        await update.message.reply_text("✅ Closed Message ပြောင်းလဲပြီးပါပြီရှင် ✨")
     else:
-        await update.message.reply_text("❌ **Usage:** `/setclosed [စာသား]`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ **Usage:** `/setclosed [စာသား]`\n💡 Example: `/setclosed Group ခဏပိတ်ထားပါသည်ရှင်`", parse_mode='Markdown')
 
 async def scheduled_open_job(context: ContextTypes.DEFAULT_TYPE):
     chat_id = context.job.data
@@ -308,7 +290,7 @@ async def cmd_opentimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     settings = get_chat_settings(chat_id)
 
     if not context.args:
-        await update.message.reply_text("❌ **Usage:** `/opentimer 8:00 am` သို့မဟုတ် `/opentimer 0`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ **Usage:** `/opentimer 8:00 am` သို့မဟုတ် `/opentimer 0`", parse_mode='Markdown')
         return
 
     val = " ".join(context.args)
@@ -316,12 +298,12 @@ async def cmd_opentimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if settings['opentimer_job']:
             settings['opentimer_job'].schedule_removal()
             settings['opentimer_job'] = None
-        await update.message.reply_text("✅ Open Timer ကို ပိတ်လိုက်ပါပြီ။")
+        await update.message.reply_text("✅ Open Timer ကို ပိတ်လိုက်ပါပြီရှင် ✨")
         return
 
     parsed_time = parse_time_input(val)
     if not parsed_time:
-        await update.message.reply_text("❌ အချိန်ပုံစံ မမှန်ပါ။ ဥပမာ - `8:00 am` သို့မဟုတ် `08:00`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ အချိန်ပုံစံ လွဲမှားနေပါတယ်နော်! ဥပမာ - `8:00 am` သို့မဟုတ် `08:00`", parse_mode='Markdown')
         return
 
     if settings['opentimer_job']:
@@ -334,7 +316,7 @@ async def cmd_opentimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         name=f"open_{chat_id}"
     )
     settings['opentimer_job'] = job
-    await update.message.reply_text(f"⏰ Daily Open Timer ကို {parsed_time.strftime('%I:%M %p')} သို့ သတ်မှတ်လိုက်ပါပြီ။")
+    await update.message.reply_text(f"⏰ Daily Open Timer ကို {parsed_time.strftime('%I:%M %p')} သို့ သတ်မှတ်လိုက်ပါပြီရှင် ✨")
 
 async def cmd_closedtimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
@@ -342,7 +324,7 @@ async def cmd_closedtimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     settings = get_chat_settings(chat_id)
 
     if not context.args:
-        await update.message.reply_text("❌ **Usage:** `/closedtimer 11:00 pm` သို့မဟုတ် `/closedtimer 0`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ **Usage:** `/closedtimer 11:00 pm` သို့မဟုတ် `/closedtimer 0`", parse_mode='Markdown')
         return
 
     val = " ".join(context.args)
@@ -350,12 +332,12 @@ async def cmd_closedtimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if settings['closedtimer_job']:
             settings['closedtimer_job'].schedule_removal()
             settings['closedtimer_job'] = None
-        await update.message.reply_text("✅ Closed Timer ကို ပိတ်လိုက်ပါပြီ။")
+        await update.message.reply_text("✅ Closed Timer ကို ပိတ်လိုက်ပါပြီရှင် ✨")
         return
 
     parsed_time = parse_time_input(val)
     if not parsed_time:
-        await update.message.reply_text("❌ အချိန်ပုံစံ မမှန်ပါ။ ဥပမာ - `11:00 pm` သို့မဟုတ် `23:00`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ အချိန်ပုံစံ လွဲမှားနေပါတယ်နော်! ဥပမာ - `11:00 pm` သို့မဟုတ် `23:00`", parse_mode='Markdown')
         return
 
     if settings['closedtimer_job']:
@@ -368,12 +350,11 @@ async def cmd_closedtimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         name=f"close_{chat_id}"
     )
     settings['closedtimer_job'] = job
-    await update.message.reply_text(f"⏰ Daily Closed Timer ကို {parsed_time.strftime('%I:%M %p')} သို့ သတ်မှတ်လိုက်ပါပြီ။")
+    await update.message.reply_text(f"⏰ Daily Closed Timer ကို {parsed_time.strftime('%I:%M %p')} သို့ သတ်မှတ်လိုက်ပါပြီရှင် ✨")
 
 # -------------------------------------------------------------------
-# 4. Welcome & Goodbye Messages
+# 4. Welcome & Goodbye
 # -------------------------------------------------------------------
-
 async def cmd_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'welcome', 'Welcome Message')
 
@@ -382,18 +363,18 @@ async def cmd_setwelcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.partition(' ')[2].strip()
     if text:
         get_chat_settings(update.effective_chat.id)['welcome_text'] = text
-        await update.message.reply_text("✅ Welcome Message ပြောင်းလဲပြီးပါပြီ။")
+        await update.message.reply_text("✅ Welcome Message ပြောင်းလဲပြီးပါပြီရှင် ✨")
     else:
-        await update.message.reply_text("❌ **Usage:** `/setwelcome [စာသား]`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ **Usage:** `/setwelcome [စာသား]`", parse_mode='Markdown')
 
 async def cmd_welcometimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
     if context.args and context.args[0].isdigit():
         sec = int(context.args[0])
         get_chat_settings(update.effective_chat.id)['welcometimer'] = sec
-        await update.message.reply_text(f"✅ Welcome Timer ကို {sec} စက္ကန့် သတ်မှတ်လိုက်ပါပြီ။")
+        await update.message.reply_text(f"✅ Welcome Timer ကို {sec} စက္ကန့် သတ်မှတ်လိုက်ပါပြီရှင် ✨")
     else:
-        await update.message.reply_text("❌ **Usage:** `/welcometimer [စက္ကန့်]`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ **Usage:** `/welcometimer [စက္ကန့်]`", parse_mode='Markdown')
 
 async def cmd_goodbye(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'goodbye', 'Goodbye Message')
@@ -403,23 +384,22 @@ async def cmd_setgoodbye(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.partition(' ')[2].strip()
     if text:
         get_chat_settings(update.effective_chat.id)['goodbye_text'] = text
-        await update.message.reply_text("✅ Goodbye Message ပြောင်းလဲပြီးပါပြီ။")
+        await update.message.reply_text("✅ Goodbye Message ပြောင်းလဲပြီးပါပြီရှင် ✨")
     else:
-        await update.message.reply_text("❌ **Usage:** `/setgoodbye [စာသား]`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ **Usage:** `/setgoodbye [စာသား]`", parse_mode='Markdown')
 
 async def cmd_goodbyetimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
     if context.args and context.args[0].isdigit():
         sec = int(context.args[0])
         get_chat_settings(update.effective_chat.id)['goodbyetimer'] = sec
-        await update.message.reply_text(f"✅ Goodbye Timer ကို {sec} စက္ကန့် သတ်မှတ်လိုက်ပါပြီ။")
+        await update.message.reply_text(f"✅ Goodbye Timer ကို {sec} စက္ကန့် သတ်မှတ်လိုက်ပါပြီရှင် ✨")
     else:
-        await update.message.reply_text("❌ **Usage:** `/goodbyetimer [စက္ကန့်]`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ **Usage:** `/goodbyetimer [စက္ကန့်]`", parse_mode='Markdown')
 
 # -------------------------------------------------------------------
-# 5. Store & MLBB ID Tools & Premium Emoji ID Extractor
+# 5. Store & MLBB Tools
 # -------------------------------------------------------------------
-
 async def cmd_idcopy_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'idcopy', 'ID Copy System')
 
@@ -431,9 +411,9 @@ async def cmd_setreplydone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.partition(' ')[2].strip()
     if text:
         get_chat_settings(update.effective_chat.id)['replydone_text'] = text
-        await update.message.reply_text("✅ Confirm Reply Text ပြောင်းလဲပြီးပါပြီ။")
+        await update.message.reply_text("✅ Confirm Reply Text ပြောင်းလဲပြီးပါပြီရှင် ✨")
     else:
-        await update.message.reply_text("❌ **Usage:** `/setreplydone [စာသား]`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ **Usage:** `/setreplydone [စာသား]`", parse_mode='Markdown')
 
 async def cmd_recdone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'recdone', 'Reaction Auto Done')
@@ -443,7 +423,7 @@ async def cmd_calculator(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_idcopy_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message.reply_to_message or not update.message.reply_to_message.text:
-        await update.message.reply_text("⚠️ Customer ၏ Game ID စာကို Reply ပြန်ပြီး `/idcopy` သို့မဟုတ် `/id` ဟု အသုံးပြုပါရှင်။", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ Customer ၏ Game ID စာကို Reply ပြန်ပြီး `/idcopy` သို့မဟုတ် `/mlbb` ဟု အသုံးပြုပါရှင် 💕", parse_mode='Markdown')
         return
 
     text = update.message.reply_to_message.text
@@ -484,9 +464,8 @@ async def cmd_idcopy_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(response_text, parse_mode='Markdown', reply_markup=markup)
 
 async def cmd_get_emoji_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Reply ပြန်ထားသော စာထဲမှ Premium Emoji ID ကို စစ်ဆေးပေးသည့် Command"""
     if not update.message.reply_to_message:
-        await update.message.reply_text("⚠️ Premium Emoji ပါသော စာကို Reply ပြန်ပြီး `/getid` ဟု အသုံးပြုပါရှင်။", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ Premium Emoji ပါသော စာကို Reply ပြန်ပြီး `/getid` ဟု အသုံးပြုပါရှင် 💕", parse_mode='Markdown')
         return
 
     reply_msg = update.message.reply_to_message
@@ -521,13 +500,20 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # -------------------------------------------------------------------
 # 6. Custom Filters
 # -------------------------------------------------------------------
-
 async def cmd_setfilter(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
     chat_id = update.effective_chat.id
     args = context.args
-    if not args:
-        await update.message.reply_text("❌ **Usage:** `/setfilter [keyword] [text]`", parse_mode='Markdown')
+    if not args or len(args) < 2:
+        await update.message.reply_text(
+            "⚠️ **` /setfilter ` အသုံးပြုပုံ လွဲမှားနေပါတယ်နော်!**\n\n"
+            "📖 **Correct Usage:**\n"
+            "`/setfilter [keyword] [reply_text]`\n\n"
+            "💡 **Example:**\n"
+            "`/setfilter kpay 09123456789`\n\n"
+            "စစ်ဆေးပြီး ပြန်လည်ရိုက်ပေးပါနော် 💕",
+            parse_mode='Markdown'
+        )
         return
     
     keyword = args[0].lower()
@@ -535,7 +521,7 @@ async def cmd_setfilter(update: Update, context: ContextTypes.DEFAULT_TYPE):
     filter_text = full_text.partition(' ')[2].strip()
     
     custom_filters.setdefault(chat_id, {})[keyword] = filter_text
-    await update.message.reply_text(f"✅ Filter `{keyword}` ကို သိမ်းဆည်းလိုက်ပါပြီ။", parse_mode='Markdown')
+    await update.message.reply_text(f"✅ Filter `{keyword}` ကို သိမ်းဆည်းလိုက်ပါပြီရှင် ✨", parse_mode='Markdown')
 
 async def cmd_deletefilter(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
@@ -543,17 +529,16 @@ async def cmd_deletefilter(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args
     if not args:
         custom_filters.pop(chat_id, None)
-        await update.message.reply_text("✅ Filter များ အားလုံးကို ဖျက်လိုက်ပါပြီ။")
+        await update.message.reply_text("✅ Filter များ အားလုံးကို ဖျက်လိုက်ပါပြီရှင် ✨")
     else:
         keyword = args[0].lower()
         if chat_id in custom_filters and keyword in custom_filters[chat_id]:
             del custom_filters[chat_id][keyword]
-            await update.message.reply_text(f"✅ Filter `{keyword}` ကို ဖျက်လိုက်ပါပြီ။", parse_mode='Markdown')
+            await update.message.reply_text(f"✅ Filter `{keyword}` ကို ဖျက်လိုက်ပါပြီရှင် ✨", parse_mode='Markdown')
 
 # -------------------------------------------------------------------
-# 7. Moderation Commands
+# 7. Moderation
 # -------------------------------------------------------------------
-
 async def cmd_ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
     if update.message.reply_to_message:
@@ -561,7 +546,7 @@ async def cmd_ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.ban_chat_member(update.effective_chat.id, target)
         await update.message.reply_text("✅ Member successfully banned.")
     else:
-        await update.message.reply_text("⚠️ Ban ချင်သည့် Member ရဲ့ Message ကို Reply ပြန်ပြီး သုံးပါရှင်။")
+        await update.message.reply_text("⚠️ Ban ချင်သည့် Member ရဲ့ Message ကို Reply ပြန်ပြီး သုံးပါရှင် 💕")
 
 async def cmd_unban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
@@ -590,19 +575,23 @@ async def cmd_kick(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_resetall(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
     group_settings.pop(update.effective_chat.id, None)
-    await update.message.reply_text("🔄 Group Settings အားလုံးကို မူလအတိုင်း Reset လုပ်လိုက်ပါပြီ။")
+    await update.message.reply_text("🔄 Group Settings အားလုံးကို မူလအတိုင်း Reset လုပ်လိုက်ပါပြီရှင် ✨")
 
 # -------------------------------------------------------------------
-# 8. Deezer Music Downloader & General Commands
+# 8. Music Downloader & Main System Commands
 # -------------------------------------------------------------------
-
 async def cmd_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("❌ **Usage:** `/music [song name]`", parse_mode='Markdown')
+        await update.message.reply_text(
+            "⚠️ **သီချင်းနာမည် ထည့်ရန် လိုအပ်ပါတယ်နော်!**\n\n"
+            "📖 **Usage:** `/music [သီချင်းနာမည်]`\n"
+            "💡 **Example:** `/music Blue Mingalabar`",
+            parse_mode='Markdown'
+        )
         return
 
     song_name = " ".join(context.args)
-    status_msg = await update.message.reply_text(f"🎵 `{song_name}` ကို ရှာဖွေနေပါသည်... ခဏစောင့်ပေးပါရှင် ⏳", parse_mode='Markdown')
+    status_msg = await update.message.reply_text(f"🎵 `{song_name}` ကို Aoi Chan ရှာဖွေပေးနေပါတယ်... ခဏစောင့်ပေးပါနော် ⏳", parse_mode='Markdown')
 
     try:
         search_url = f"https://api.deezer.com/search?q={requests.utils.quote(song_name)}&limit=1"
@@ -647,15 +636,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     telegraph_url = "https://telegra.ph/Aoi-Chan-Bot--Usage-Guide--Commands-Manual-07-26"
-    
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "👉 [Click Here to View Manual]", 
-                url=telegraph_url
-            )
-        ]
-    ]
+    keyboard = [[InlineKeyboardButton("👉 [Click Here to View Manual]", url=telegraph_url)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(
@@ -666,26 +647,57 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sparkle = get_tg_emoji("sparkle", "✨")
+    
     help_text = (
-        f"{sparkle} <b>Aoi Chan Bot - Help Menu</b> {sparkle}\n\n"
-        "• /permission on/off - Group Open/Close System\n"
-        "• /opentimer - Set Open Time\n"
-        "• /closedtimer - Set Close Time\n"
-        "• /idcopy - Copy Game ID\n"
-        "• /getid - Extract Custom Premium Emoji ID\n"
-        "• /replydone - Enable Confirm/Delete Buttons\n"
-        "• /welcome - Toggle Welcome Message\n"
-        "• /music - Download Audio Preview\n"
+        f"{sparkle} <b>Aoi Chan Bot - Command Manual</b> {sparkle}\n\n"
+        "🛡 <b>1. Security & Guard</b>\n"
+        "• /forwardblock on/off - Forward စာများ ပိတ်/ဖွင့်\n"
+        "• /linkblock on/off - Link များ ပိတ်/ဖွင့်\n"
+        "• /autoban on/off - ထွက်သွားသူများကို Auto-Ban\n"
+        "• /joineddelete on/off - Joined Message များ ဖျက်ရန်\n\n"
+        "👤 <b>2. Tracking & Info</b>\n"
+        "• /track on/off - User History မှတ်တမ်းတင်စနစ်\n"
+        "• /check - User History ကြည့်ရန် (Reply ပြန်ပါ)\n"
+        "• /info - User Info ကြည့်ရန် (Reply ပြန်ပါ)\n\n"
+        "🏪 <b>3. Open/Closed System</b>\n"
+        "• /permission on/off - Open/Closed စနစ် ပိတ်/ဖွင့်\n"
+        "• open | closed - စာဖြင့် တိုက်ရိုက် Permission ပိတ်/ဖွင့်\n"
+        "• /setopen | /setclosed - Message စာသား ပြောင်းရန်\n"
+        "• /opentimer | /closedtimer - အချိန်ဖြင့် Timer ပေးရန်\n\n"
+        "👋 <b>4. Welcome & Goodbye</b>\n"
+        "• /welcome on/off | /setwelcome | /welcometimer\n"
+        "• /goodbye on/off | /setgoodbye | /goodbyetimer\n\n"
+        "💎 <b>5. Store & MLBB Tools</b>\n"
+        "• /mlbb | /idcopy - Customer Game ID Extract လုပ်ရန် (Reply ပြန်ပါ)\n"
+        "• /idcopytoggle on/off - ID Copy စနစ် ပိတ်/ဖွင့်\n"
+        "• /replydone on/off | /setreplydone - Confirm/Delete ခလုတ်စနစ်\n"
+        "• /recdone on/off - Reaction Auto Done စနစ်\n"
+        "• /calculator on/off - Auto-Math တွက်ချက်မှုစနစ်\n"
+        "• /getid - Custom Emoji ID ထုတ်ယူရန် (Reply ပြန်ပါ)\n\n"
+        "💬 <b>6. Custom Filters</b>\n"
+        "• /setfilter [keyword] [text] - Filter အသစ်ထည့်ရန်\n"
+        "• /deletefilter [keyword] - Filter ဖျက်ရန်\n\n"
+        "⚒ <b>7. Moderation</b>\n"
+        "• /ban | /unban | /mute | /kick | /resetall - အဖွဲ့ဝင်များ ထိန်းချုပ်ရန်\n\n"
+        "🎵 <b>8. Music Downloader</b>\n"
+        "• /music [song_name] - သီချင်းရှာဖွေ ဒေါင်းလုဒ်ဆွဲရန်\n"
     )
-    await update.message.reply_text(help_text, parse_mode='HTML')
+    
+    telegraph_url = "https://telegra.ph/Aoi-Chan-Bot--Usage-Guide--Commands-Manual-07-26"
+    keyboard = [[InlineKeyboardButton("👉 [Click Here to View Manual]", url=telegraph_url)]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text(
+        text=help_text, 
+        parse_mode='HTML', 
+        reply_markup=reply_markup
+    )
 
 # -------------------------------------------------------------------
-# 9. Smart Unknown Command Handler
+# Smart Unknown Command Handler
 # -------------------------------------------------------------------
-
 async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or not update.message.text:
-        return
+    if not update.message or not update.message.text: return
 
     user_cmd = update.message.text.split()[0].lstrip('/').lower()
     
@@ -711,9 +723,8 @@ async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_T
     await update.message.reply_text(reply_msg, parse_mode='Markdown')
 
 # -------------------------------------------------------------------
-# Event Handlers & Main Initialization
+# Message Handler Events
 # -------------------------------------------------------------------
-
 async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text: return
     chat_id = update.effective_chat.id
@@ -721,7 +732,6 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
     text = update.message.text.strip()
     raw_text = text.lower()
 
-    # Open / Close Group Direct Text Command Trigger
     if settings.get('permission', False) and await is_admin(update, context):
         if raw_text in ["open", "/open"]:
             await open_group(chat_id, context)
@@ -730,13 +740,11 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
             await close_group(chat_id, context)
             return
 
-    # Link Block
     if settings.get('linkblock', False) and not await is_admin(update, context):
         if "http://" in text or "https://" in text or "t.me" in text:
             await update.message.delete()
             return
 
-    # Safe Auto Calculator
     if settings.get('calculator', True):
         if re.match(r'^[0-9\+\-\*\/\(\)\.\s]+$', text) and any(op in text for op in ['+', '-', '*', '/']):
             try:
@@ -747,33 +755,41 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
             except Exception:
                 pass
 
-    # Custom Filter
     if chat_id in custom_filters:
         for kw, reply in custom_filters[chat_id].items():
             if kw in raw_text:
                 await update.message.reply_text(reply)
                 break
 
+# -------------------------------------------------------------------
+# Application Main Function
+# -------------------------------------------------------------------
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # Command Handlers
+    # Base Commands
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
+    
+    # 1. Security & Guard
     app.add_handler(CommandHandler("forwardblock", cmd_forwardblock))
     app.add_handler(CommandHandler("linkblock", cmd_linkblock))
     app.add_handler(CommandHandler("autoban", cmd_autoban))
     app.add_handler(CommandHandler("joineddelete", cmd_joineddelete))
+    
+    # 2. Tracking & Info
     app.add_handler(CommandHandler("track", cmd_track))
     app.add_handler(CommandHandler("check", cmd_check))
     app.add_handler(CommandHandler("info", cmd_info))
     
+    # 3. Open/Closed System
     app.add_handler(CommandHandler("permission", cmd_permission))
     app.add_handler(CommandHandler("setopen", cmd_setopen))
     app.add_handler(CommandHandler("setclosed", cmd_setclosed))
     app.add_handler(CommandHandler("opentimer", cmd_opentimer))
     app.add_handler(CommandHandler("closedtimer", cmd_closedtimer))
 
+    # 4. Welcome & Goodbye
     app.add_handler(CommandHandler("welcome", cmd_welcome))
     app.add_handler(CommandHandler("setwelcome", cmd_setwelcome))
     app.add_handler(CommandHandler("welcometimer", cmd_welcometimer))
@@ -781,28 +797,33 @@ def main():
     app.add_handler(CommandHandler("setgoodbye", cmd_setgoodbye))
     app.add_handler(CommandHandler("goodbyetimer", cmd_goodbyetimer))
 
+    # 5. Store & MLBB Tools
     app.add_handler(CommandHandler("idcopytoggle", cmd_idcopy_toggle))
-    app.add_handler(CommandHandler(["id", "idcopy"], cmd_idcopy_reply))
+    app.add_handler(CommandHandler(["mlbb", "id", "idcopy"], cmd_idcopy_reply))
     app.add_handler(CommandHandler("getid", cmd_get_emoji_id))
     app.add_handler(CommandHandler("replydone", cmd_replydone))
     app.add_handler(CommandHandler("setreplydone", cmd_setreplydone))
     app.add_handler(CommandHandler("recdone", cmd_recdone))
     app.add_handler(CommandHandler("calculator", cmd_calculator))
 
+    # 6. Custom Filters
     app.add_handler(CommandHandler("setfilter", cmd_setfilter))
     app.add_handler(CommandHandler("deletefilter", cmd_deletefilter))
 
+    # 7. Moderation
     app.add_handler(CommandHandler("ban", cmd_ban))
     app.add_handler(CommandHandler("unban", cmd_unban))
     app.add_handler(CommandHandler("mute", cmd_mute))
     app.add_handler(CommandHandler("kick", cmd_kick))
     app.add_handler(CommandHandler("resetall", cmd_resetall))
+
+    # 8. Music Downloader
     app.add_handler(CommandHandler("music", cmd_music))
 
-    # Unknown Command Handler (Must be placed after all defined CommandHandlers)
+    # Smart Catch Unknown Commands
     app.add_handler(MessageHandler(filters.COMMAND, handle_unknown_command))
 
-    # Event Handlers
+    # Callbacks & Messages Handler
     app.add_handler(CallbackQueryHandler(handle_buttons))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message_events))
 
