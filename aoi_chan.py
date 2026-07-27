@@ -544,14 +544,13 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     keyboard = [
-        [InlineKeyboardButton("👉 [Click Here to View Usages]", url="https://telegra.ph/Aoi-Chan-Bot--Usage-Guide--Commands-Manual-07-26")]
+        [InlineKeyboardButton("👈 [Click Here to View Manual]", url="https://telegra.ph/Aoi-Chan-Bot--Usage-Guide--Commands-Manual-07-26")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        text=f"{welcome_text}\n\n*Aoi Chan usages*", 
-        reply_markup=reply_markup, 
-        parse_mode='Markdown'
+        text=f"{welcome_text}\n\nAoi Chan usages", 
+        reply_markup=reply_markup
     )
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
