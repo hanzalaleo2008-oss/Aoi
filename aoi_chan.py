@@ -156,48 +156,10 @@ async def cmd_info(update, context):
     await update.message.reply_text(info_text, parse_mode='HTML')
 
 # -------------------------------------------------------------------
-# (All other functions: open/close group, timers, welcome/goodbye, MLBB tools, filters, moderation, music, etc.)
+# (Continue with all other functions: open/close group, timers, welcome/goodbye, MLBB tools, filters, moderation, music, etc.)
 # -------------------------------------------------------------------
-# For brevity here, but in your actual file you’ll keep every function defined exactly as before.
 
 # -------------------------------------------------------------------
 # General Commands
 # -------------------------------------------------------------------
-async def cmd_start(update, context):
-    await update.message.reply_text("မင်္ဂလာပါရှင်၊ Aoi Chan Bot မှ ကြိုဆိုပါတယ်! ✨\n\nအသေးစိတ် Command များကို ကြည့်ရန် /help ကို သုံးပါ။")
-
-async def cmd_help(update, context):
-    help_text = (
-        "✨ <b>Aoi Chan Bot - Help Menu</b> ✨\n\n"
-        "• /permission on/off - Group Open/Close\n"
-        "• /opentimer - Set Open Time\n"
-        "• /closedtimer - Set Close Time\n"
-        "• /idcopy - Copy Game ID\n"
-        "• /replydone - Confirm/Delete Buttons\n"
-        "• /welcome - Toggle Welcome\n"
-        "• /music - Download Audio Preview\n"
-    )
-    await update.message.reply_text(help_text, parse_mode='HTML')
-
-# -------------------------------------------------------------------
-# Main Initialization
-# -------------------------------------------------------------------
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    # Register core commands
-    app.add_handler(CommandHandler("start", cmd_start))
-    app.add_handler(CommandHandler("help", cmd_help))
-
-    # Wrong command helper
-    app.add_handler(MessageHandler(filters.COMMAND, wrong_command_helper))
-
-    # Register all other handlers (forwardblock, linkblock, etc.)
-    app.add_handler(CommandHandler("forwardblock", cmd_forwardblock))
-    app.add_handler(CommandHandler("linkblock", cmd_linkblock))
-    app.add_handler(CommandHandler("autoban", cmd_autoban))
-    app.add_handler(CommandHandler("joineddelete", cmd_joineddelete))
-    app.add_handler(CommandHandler("track", cmd_track))
-    app.add_handler(CommandHandler("check", cmd_check))
-    app.add_handler(CommandHandler("info", cmd_info))
-    #
+async def cmd
