@@ -3,7 +3,7 @@ import logging
 import re
 from datetime import datetime, time
 import pytz
-import yt_dlp
+import requests
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import (
@@ -475,46 +475,53 @@ async def cmd_resetall(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🔄 Group Settings အားလုံးကို မူလအတိုင်း Reset လုပ်လိုက်ပါပြီ။")
 
 # -------------------------------------------------------------------
-# 8. Real Music Downloader & General Commands
+# 8. Fast API Music Downloader & General Commands
 # -------------------------------------------------------------------
 
 async def cmd_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("❌ **Usage:** `/music [သီချင်းနာမည်]`\n💡 **Example:** `/music like jennie`", parse_mode='Markdown')
+        await update.message.reply_text(
+            "❌ **Command အသုံးပြုပုံ မှားယွင်းနေပါသည်။**\n\n"
+            "💡 **Example:**\n"
+            "• `/music like jennie`",
+            parse_mode='Markdown'
+        )
         return
 
     song_name = " ".join(context.args)
-    status_msg = await update.message.reply_text(f"🎵 `{song_name}` ကို ရှာဖွေဒေါင်းလုဒ်ဆွဲနေပါသည်... ခဏစောင့်ပေးပါရှင် ⏳", parse_mode='Markdown')
-
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': 'song.%(ext)s',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
-        'quiet': True,
-    }
+    status_msg = await update.message.reply_text(f"🎵 `{song_name}` ကို ရှာဖွေနေပါသည်... ခဏစောင့်ပေးပါရှင် ⏳", parse_mode='Markdown')
 
     try:
-        # YouTube မှ Audio MP3 ကို ဒေါင်းလုဒ်ဆွဲခြင်း
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(f"ytsearch1:{song_name}", download=True)['entries'][0]
-            title = info.get('title', 'Audio')
+        search_url = f"https://api.deezer.com/search?q={requests.utils.quote(song_name)}&limit=1"
+        response = requests.get(search_url, timeout=10).json()
 
-        # Telegram ထဲသို့ MP3 Audio File ပို့ပေးခြင်း
-        with open("song.mp3", 'rb') as audio:
-            await update.message.reply_audio(audio=audio, title=title, caption=f"✨ **{title}**", parse_mode='Markdown')
+        if not response.get('data'):
+            await status_msg.edit_text("❌ သီချင်း ရှာမတွေ့ပါရှင်။ စာလုံးပေါင်း ပြန်စစ်ပေးပါ သို့မဟုတ် အဆိုတော် နာမည်ပါ ထည့်ရိုက်ပေးပါရှင်။")
+            return
+
+        track = response['data'][0]
+        title = track.get('title', 'Unknown Title')
+        artist = track.get('artist', {}).get('name', 'Unknown Artist')
+        audio_url = track.get('preview')
+
+        if not audio_url:
+            await status_msg.edit_text("❌ သီချင်း Audio File ရယူ၍ မရနိုင်ပါရှင်။")
+            return
+
+        await context.bot.send_audio(
+            chat_id=update.effective_chat.id,
+            audio=audio_url,
+            title=title,
+            performer=artist,
+            caption=f"✨ **{title}** - {artist}\n🎵 *Aoi Chan Music System*",
+            parse_mode='Markdown'
+        )
         
-        # Temp Audio File နှင့် Status Message ရှင်းလင်းခြင်း
         await status_msg.delete()
-        if os.path.exists("song.mp3"):
-            os.remove("song.mp3")
 
     except Exception as e:
-        logging.error(f"Music download error: {e}")
-        await status_msg.edit_text("❌ သီချင်းရှာမတွေ့ပါ သို့မဟုတ် ဒေါင်းလုဒ်ဆွဲရာတွင် အမှားအယွင်းရှိနေပါသည်။")
+        logging.error(f"Music API error: {e}")
+        await status_msg.edit_text("❌ သီချင်း ရှာဖွေရာတွင် အမှားအယွင်း ရှိနေပါသည်။ ခဏနေမှ ပြန်စမ်းပေးပါရှင်။")
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
@@ -736,7 +743,7 @@ def main():
     # Unknown Command Fallback (Must be added last)
     app.add_handler(MessageHandler(filters.COMMAND, handle_unknown_command))
 
-    print("Aoi Chan Bot Complete Suite with Music Downloader is running...")
+    print("Aoi Chan Bot with Fast Music API is running...")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
