@@ -11,6 +11,7 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     CallbackQueryHandler,
+    ChatMemberHandler,
     ContextTypes,
     filters,
 )
@@ -63,6 +64,13 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     user_id = update.effective_user.id
     member = await context.bot.get_chat_member(chat_id, user_id)
     return member.status in ['creator', 'administrator']
+
+async def delete_message_job(context: ContextTypes.DEFAULT_TYPE):
+    job_data = context.job.data
+    try:
+        await context.bot.delete_message(chat_id=job_data['chat_id'], message_id=job_data['message_id'])
+    except Exception as e:
+        logging.error(f"Failed to delete message: {e}")
 
 async def toggle_setting(update: Update, context: ContextTypes.DEFAULT_TYPE, key: str, name: str):
     if not await is_admin(update, context):
@@ -183,7 +191,20 @@ async def close_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_permission(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'permission', 'Open/Closed Permission')
 
-# Shift + Enter အလှအတိုင်း သိမ်းပေးရန် partition(' ')[2] ပြောင်းထားပါသည်
+async def handle_open_closed_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text: return
+    chat_id = update.effective_chat.id
+    settings = get_chat_settings(chat_id)
+
+    if not settings.get('permission', False) or not await is_admin(update, context):
+        return
+
+    raw_text = update.message.text.strip().lower()
+    if raw_text in ["open", "/open"]:
+        await open_group(chat_id, context)
+    elif raw_text in ["closed", "close", "/closed"]:
+        await close_group(chat_id, context)
+
 async def cmd_setopen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
     chat_id = update.effective_chat.id
@@ -338,7 +359,7 @@ async def cmd_goodbyetimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ **Usage:** `/goodbyetimer [စက္ကန့်]`", parse_mode='Markdown')
 
 # -------------------------------------------------------------------
-# 5. Store & MLBB ID Tools (Buttons ပါဝင်သော အပိုင်း)
+# 5. Store & MLBB ID Tools
 # -------------------------------------------------------------------
 
 async def cmd_idcopy_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -391,7 +412,7 @@ async def cmd_idcopy_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"💡 *ဂဏန်းပေါ်ကို Tap နှိပ်ရုံဖြင့် တိုက်ရိုက် Copy ကူးနိုင်ပါသည်။*"
         )
 
-    # Reply Done Buttons စနစ်
+    # Reply Done Buttons စနစ်ဖွင့်ထားပါက Confirm / Delete Button များ ထည့်သွင်းပေးခြင်း
     chat_id = update.effective_chat.id
     settings = get_chat_settings(chat_id)
     keyboard = []
@@ -558,17 +579,8 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
     if not update.message or not update.message.text: return
     chat_id = update.effective_chat.id
     settings = get_chat_settings(chat_id)
+    user = update.effective_user
     text = update.message.text.strip()
-
-    # Open / Closed Text Listener
-    if settings.get('permission', False) and await is_admin(update, context):
-        raw_text = text.lower()
-        if raw_text in ["open", "/open"]:
-            await open_group(chat_id, context)
-            return
-        elif raw_text in ["closed", "close", "/closed"]:
-            await close_group(chat_id, context)
-            return
 
     # Link Block
     if settings.get('linkblock', False) and not await is_admin(update, context):
