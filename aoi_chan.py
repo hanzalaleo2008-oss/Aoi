@@ -130,6 +130,7 @@ COMMAND_HELP = {
     "replydone": "• Usage: `/replydone on` သို့မဟုတ် `/replydone off`",
     "setreplydone": "• Usage: `/setreplydone [စာသား]`",
     "recdone": "• Usage: `/recdone on` သို့မဟုတ် `/recdone off`",
+    "setrecdone": "• Usage: `/setrecdone [စာသား]`\n💡 Example: `/setrecdone Done ပါပြီနော် ✨`",
     "calculator": "• Usage: `/calculator on` သို့မဟုတ် `/calculator off`",
     "getid": "• Usage: Custom Emoji ပါသော စာကို Reply ပြန်ပြီး `/getid` ဟု ရိုက်ပါ။",
     "setfilter": "• Usage: `/setfilter [keyword] [text]`\n💡 Example: `/setfilter kpay 09123456789`",
@@ -165,6 +166,7 @@ def get_chat_settings(chat_id: int) -> dict:
         'replydone': False,
         'replydone_text': "ထည့်ပြီးပါပြီရှင့်✔️\nကျေးဇူးတင်ပါတယ်ရှင့်\nနောက်လည်းလာခဲ့ပါအုံးနော်",
         'recdone': False,
+        'recdone_text': "Done ပါပြီနော် ✨",
         'calculator': True,
     })
 
@@ -451,6 +453,24 @@ async def cmd_setreplydone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_recdone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'recdone', 'Reaction Auto Done')
 
+async def cmd_setrecdone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_admin(update, context): return
+    formatted_text = extract_premium_emoji_text(update.message)
+    if not formatted_text:
+        full_text = update.message.text.partition(' ')[2].strip()
+        formatted_text = full_text if full_text else ""
+
+    if formatted_text:
+        get_chat_settings(update.effective_chat.id)['recdone_text'] = formatted_text
+        await update.message.reply_text("✅ Reaction Done Message ကို ပြောင်းလဲပြီးပါပြီရှင် ✨", parse_mode='HTML')
+    else:
+        await update.message.reply_text(
+            "⚠️ **အသုံးပြုပုံ လွဲမှားနေပါတယ်နော်!**\n\n"
+            "📖 **Usage:** `/setrecdone [စာသား]`\n"
+            "💡 **Example:** `/setrecdone Done ပါပြီနော် ✨`",
+            parse_mode='Markdown'
+        )
+
 async def cmd_calculator(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'calculator', 'Calculator Auto-math')
 
@@ -704,7 +724,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /mlbb | /idcopy - Customer Game ID Extract လုပ်ရန် (Reply ပြန်ပါ)\n"
         "• /idcopytoggle on/off - ID Copy စနစ် ပိတ်/ဖွင့်\n"
         "• /replydone on/off | /setreplydone - Confirm/Delete ခလုတ်စနစ်\n"
-        "• /recdone on/off - Reaction Auto Done စနစ်\n"
+        "• /recdone on/off | /setrecdone - Reaction Auto Done စနစ်\n"
         "• /calculator on/off - Auto-Math တွက်ချက်မှုစနစ်\n"
         "• /getid - Custom Emoji ID ထုတ်ယူရန် (Reply ပြန်ပါ)\n\n"
         "💬 <b>6. Custom Filters</b>\n"
@@ -837,6 +857,7 @@ def main():
     app.add_handler(CommandHandler("replydone", cmd_replydone))
     app.add_handler(CommandHandler("setreplydone", cmd_setreplydone))
     app.add_handler(CommandHandler("recdone", cmd_recdone))
+    app.add_handler(CommandHandler("setrecdone", cmd_setrecdone))
     app.add_handler(CommandHandler("calculator", cmd_calculator))
 
     # 6. Custom Filters
