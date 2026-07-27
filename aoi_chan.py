@@ -46,6 +46,39 @@ def get_tg_emoji(emoji_name: str, fallback: str = "✨") -> str:
         return f'<tg-emoji emoji-id="{emoji_id}">{fallback}</tg-emoji>'
     return fallback
 
+# Premium Emoji Parser Helper Function
+def extract_premium_emoji_text(message) -> str:
+    """
+    Message ထဲတွင်ပါသော Custom Premium Emoji များကို <tg-emoji> HTML tag သို့ အလိုအလျောက် ပြောင်းလဲပေးသည့် Function
+    """
+    if not message or not message.text:
+        return ""
+
+    full_text = message.text.partition(' ')[2].strip()
+    if not full_text:
+        return ""
+
+    entities = message.entities or []
+    text_offset = message.text.find(full_text)
+    
+    formatted_text = ""
+    last_idx = text_offset
+    
+    for entity in entities:
+        if entity.offset >= text_offset:
+            formatted_text += message.text[last_idx:entity.offset]
+            
+            if entity.type == "custom_emoji":
+                emoji_char = message.text[entity.offset : entity.offset + entity.length]
+                formatted_text += f'<tg-emoji emoji-id="{entity.custom_emoji_id}">{emoji_char}</tg-emoji>'
+            else:
+                formatted_text += message.text[entity.offset : entity.offset + entity.length]
+                
+            last_idx = entity.offset + entity.length
+
+    formatted_text += message.text[last_idx:]
+    return formatted_text
+
 # Safe Arithmetic Evaluator
 OPERATORS = {
     ast.Add: operator.add,
@@ -226,7 +259,7 @@ async def open_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     )
     try:
         await context.bot.set_chat_permissions(chat_id=chat_id, permissions=permissions)
-        await context.bot.send_message(chat_id=chat_id, text=settings['open_text'])
+        await context.bot.send_message(chat_id=chat_id, text=settings['open_text'], parse_mode='HTML')
     except Exception as e:
         logging.error(f"Failed to open group: {e}")
 
@@ -240,7 +273,7 @@ async def close_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     )
     try:
         await context.bot.set_chat_permissions(chat_id=chat_id, permissions=permissions)
-        await context.bot.send_message(chat_id=chat_id, text=settings['closed_text'])
+        await context.bot.send_message(chat_id=chat_id, text=settings['closed_text'], parse_mode='HTML')
     except Exception as e:
         logging.error(f"Failed to close group: {e}")
 
@@ -249,21 +282,21 @@ async def cmd_permission(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_setopen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
-    text = update.message.text.partition(' ')[2].strip()
-    if text:
-        get_chat_settings(update.effective_chat.id)['open_text'] = text
-        await update.message.reply_text("✅ Open Message ပြောင်းလဲပြီးပါပြီရှင် ✨")
+    formatted_text = extract_premium_emoji_text(update.message)
+    if formatted_text:
+        get_chat_settings(update.effective_chat.id)['open_text'] = formatted_text
+        await update.message.reply_text("✅ Open Message ပြောင်းလဲပြီးပါပြီရှင် ✨", parse_mode='HTML')
     else:
-        await update.message.reply_text("⚠️ **Usage:** `/setopen [စာသား]`\n💡 Example: `/setopen Group ဖွင့်လိုက်ပါပြီရှင်`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ **Usage:** `/setopen [စာသား]`", parse_mode='Markdown')
 
 async def cmd_setclosed(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
-    text = update.message.text.partition(' ')[2].strip()
-    if text:
-        get_chat_settings(update.effective_chat.id)['closed_text'] = text
-        await update.message.reply_text("✅ Closed Message ပြောင်းလဲပြီးပါပြီရှင် ✨")
+    formatted_text = extract_premium_emoji_text(update.message)
+    if formatted_text:
+        get_chat_settings(update.effective_chat.id)['closed_text'] = formatted_text
+        await update.message.reply_text("✅ Closed Message ပြောင်းလဲပြီးပါပြီရှင် ✨", parse_mode='HTML')
     else:
-        await update.message.reply_text("⚠️ **Usage:** `/setclosed [စာသား]`\n💡 Example: `/setclosed Group ခဏပိတ်ထားပါသည်ရှင်`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ **Usage:** `/setclosed [စာသား]`", parse_mode='Markdown')
 
 async def scheduled_open_job(context: ContextTypes.DEFAULT_TYPE):
     chat_id = context.job.data
@@ -360,10 +393,10 @@ async def cmd_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_setwelcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
-    text = update.message.text.partition(' ')[2].strip()
-    if text:
-        get_chat_settings(update.effective_chat.id)['welcome_text'] = text
-        await update.message.reply_text("✅ Welcome Message ပြောင်းလဲပြီးပါပြီရှင် ✨")
+    formatted_text = extract_premium_emoji_text(update.message)
+    if formatted_text:
+        get_chat_settings(update.effective_chat.id)['welcome_text'] = formatted_text
+        await update.message.reply_text("✅ Welcome Message ပြောင်းလဲပြီးပါပြီရှင် ✨", parse_mode='HTML')
     else:
         await update.message.reply_text("⚠️ **Usage:** `/setwelcome [စာသား]`", parse_mode='Markdown')
 
@@ -381,10 +414,10 @@ async def cmd_goodbye(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_setgoodbye(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
-    text = update.message.text.partition(' ')[2].strip()
-    if text:
-        get_chat_settings(update.effective_chat.id)['goodbye_text'] = text
-        await update.message.reply_text("✅ Goodbye Message ပြောင်းလဲပြီးပါပြီရှင် ✨")
+    formatted_text = extract_premium_emoji_text(update.message)
+    if formatted_text:
+        get_chat_settings(update.effective_chat.id)['goodbye_text'] = formatted_text
+        await update.message.reply_text("✅ Goodbye Message ပြောင်းလဲပြီးပါပြီရှင် ✨", parse_mode='HTML')
     else:
         await update.message.reply_text("⚠️ **Usage:** `/setgoodbye [စာသား]`", parse_mode='Markdown')
 
@@ -408,10 +441,10 @@ async def cmd_replydone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_setreplydone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
-    text = update.message.text.partition(' ')[2].strip()
-    if text:
-        get_chat_settings(update.effective_chat.id)['replydone_text'] = text
-        await update.message.reply_text("✅ Confirm Reply Text ပြောင်းလဲပြီးပါပြီရှင် ✨")
+    formatted_text = extract_premium_emoji_text(update.message)
+    if formatted_text:
+        get_chat_settings(update.effective_chat.id)['replydone_text'] = formatted_text
+        await update.message.reply_text("✅ Confirm Reply Text ပြောင်းလဲပြီးပါပြီရှင် ✨", parse_mode='HTML')
     else:
         await update.message.reply_text("⚠️ **Usage:** `/setreplydone [စာသား]`", parse_mode='Markdown')
 
@@ -438,16 +471,16 @@ async def cmd_idcopy_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if server_id:
         response_text = (
-            f"🎮 **MLBB ID Information:**\n\n"
-            f"• **Game ID:** `{user_id}`\n"
-            f"• **Server ID:** `{server_id}`\n\n"
-            f"💡 *ဂဏန်းပေါ်ကို Tap နှိပ်ရုံဖြင့် တိုက်ရိုက် Copy ကူးနိုင်ပါသည်။*"
+            f"🎮 <b>MLBB ID Information:</b>\n\n"
+            f"• <b>Game ID:</b> <code>{user_id}</code>\n"
+            f"• <b>Server ID:</b> <code>{server_id}</code>\n\n"
+            f"💡 <i>ဂဏန်းပေါ်ကို Tap နှိပ်ရုံဖြင့် တိုက်ရိုက် Copy ကူးနိုင်ပါသည်။</i>"
         )
     else:
         response_text = (
-            f"🎮 **MLBB ID Information:**\n\n"
-            f"• **Game ID:** `{user_id}`\n\n"
-            f"💡 *ဂဏန်းပေါ်ကို Tap နှိပ်ရုံဖြင့် တိုက်ရိုက် Copy ကူးနိုင်ပါသည်။*"
+            f"🎮 <b>MLBB ID Information:</b>\n\n"
+            f"• <b>Game ID:</b> <code>{user_id}</code>\n\n"
+            f"💡 <i>ဂဏန်းပေါ်ကို Tap နှိပ်ရုံဖြင့် တိုက်ရိုက် Copy ကူးနိုင်ပါသည်။</i>"
         )
 
     chat_id = update.effective_chat.id
@@ -461,7 +494,7 @@ async def cmd_idcopy_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
 
     markup = InlineKeyboardMarkup(keyboard) if keyboard else None
-    await update.message.reply_text(response_text, parse_mode='Markdown', reply_markup=markup)
+    await update.message.reply_text(response_text, parse_mode='HTML', reply_markup=markup)
 
 async def cmd_get_emoji_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message.reply_to_message:
@@ -495,7 +528,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "confirm_msg":
         chat_id = query.message.chat_id
         text = get_chat_settings(chat_id).get('replydone_text')
-        await query.message.reply_text(text)
+        await query.message.reply_text(text, parse_mode='HTML')
 
 # -------------------------------------------------------------------
 # 6. Custom Filters
@@ -517,11 +550,11 @@ async def cmd_setfilter(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     keyword = args[0].lower()
-    full_text = update.message.text.partition(' ')[2].strip()
-    filter_text = full_text.partition(' ')[2].strip()
-    
+    formatted_text = extract_premium_emoji_text(update.message)
+    filter_text = formatted_text.partition(' ')[2].strip()
+
     custom_filters.setdefault(chat_id, {})[keyword] = filter_text
-    await update.message.reply_text(f"✅ Filter `{keyword}` ကို သိမ်းဆည်းလိုက်ပါပြီရှင် ✨", parse_mode='Markdown')
+    await update.message.reply_text(f"✅ Filter <b>{keyword}</b> ကို သိမ်းဆည်းလိုက်ပါပြီရှင် ✨", parse_mode='HTML')
 
 async def cmd_deletefilter(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
@@ -534,7 +567,7 @@ async def cmd_deletefilter(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyword = args[0].lower()
         if chat_id in custom_filters and keyword in custom_filters[chat_id]:
             del custom_filters[chat_id][keyword]
-            await update.message.reply_text(f"✅ Filter `{keyword}` ကို ဖျက်လိုက်ပါပြီရှင် ✨", parse_mode='Markdown')
+            await update.message.reply_text(f"✅ Filter <b>{keyword}</b> ကို ဖျက်လိုက်ပါပြီရှင် ✨", parse_mode='HTML')
 
 # -------------------------------------------------------------------
 # 7. Moderation
@@ -615,8 +648,8 @@ async def cmd_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
             audio=audio_url,
             title=title,
             performer=artist,
-            caption=f"✨ **{title}** - {artist}\n🎵 *Aoi Chan Music System*",
-            parse_mode='Markdown'
+            caption=f"✨ <b>{title}</b> - {artist}\n🎵 <i>Aoi Chan Music System</i>",
+            parse_mode='HTML'
         )
         await status_msg.delete()
 
@@ -758,7 +791,7 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
     if chat_id in custom_filters:
         for kw, reply in custom_filters[chat_id].items():
             if kw in raw_text:
-                await update.message.reply_text(reply)
+                await update.message.reply_text(reply, parse_mode='HTML')
                 break
 
 # -------------------------------------------------------------------
