@@ -3,6 +3,7 @@ import logging
 import re
 from datetime import datetime, time
 import pytz
+import yt_dlp
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import (
@@ -474,15 +475,46 @@ async def cmd_resetall(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🔄 Group Settings အားလုံးကို မူလအတိုင်း Reset လုပ်လိုက်ပါပြီ။")
 
 # -------------------------------------------------------------------
-# 8. Music Feature & General Commands
+# 8. Real Music Downloader & General Commands
 # -------------------------------------------------------------------
 
 async def cmd_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("❌ **Usage:** `/music [သီချင်းနာမည် သို့မဟုတ် အဆိုတော်]`", parse_mode='Markdown')
+        await update.message.reply_text("❌ **Usage:** `/music [သီချင်းနာမည်]`\n💡 **Example:** `/music like jennie`", parse_mode='Markdown')
         return
+
     song_name = " ".join(context.args)
-    await update.message.reply_text(f"🎵 Searching for `{song_name}`...\n(သီချင်းရှာဖွေရေး စနစ်အား ချိတ်ဆက်နေပါသည်ရှင်)", parse_mode='Markdown')
+    status_msg = await update.message.reply_text(f"🎵 `{song_name}` ကို ရှာဖွေဒေါင်းလုဒ်ဆွဲနေပါသည်... ခဏစောင့်ပေးပါရှင် ⏳", parse_mode='Markdown')
+
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': 'song.%(ext)s',
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+        'quiet': True,
+    }
+
+    try:
+        # YouTube မှ Audio MP3 ကို ဒေါင်းလုဒ်ဆွဲခြင်း
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"ytsearch1:{song_name}", download=True)['entries'][0]
+            title = info.get('title', 'Audio')
+
+        # Telegram ထဲသို့ MP3 Audio File ပို့ပေးခြင်း
+        with open("song.mp3", 'rb') as audio:
+            await update.message.reply_audio(audio=audio, title=title, caption=f"✨ **{title}**", parse_mode='Markdown')
+        
+        # Temp Audio File နှင့် Status Message ရှင်းလင်းခြင်း
+        await status_msg.delete()
+        if os.path.exists("song.mp3"):
+            os.remove("song.mp3")
+
+    except Exception as e:
+        logging.error(f"Music download error: {e}")
+        await status_msg.edit_text("❌ သီချင်းရှာမတွေ့ပါ သို့မဟုတ် ဒေါင်းလုဒ်ဆွဲရာတွင် အမှားအယွင်းရှိနေပါသည်။")
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
@@ -524,13 +556,13 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /deletefilter [keyword]\n\n"
         "<b>🔨 7. Moderation</b>\n"
         "• /ban | /unban | /mute | /kick | /resetall\n\n"
-        "<b>🎵 8. Music</b>\n"
+        "<b>🎵 8. Music Downloader</b>\n"
         "• /music [song name]\n"
     )
     await update.message.reply_text(help_text, parse_mode='HTML')
 
 # -------------------------------------------------------------------
-# Automated Handlers (Events, Chat Members, Messages)
+# Event Handlers
 # -------------------------------------------------------------------
 
 async def handle_member_status_change(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -606,7 +638,6 @@ async def handle_new_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
             msg_text = settings['welcome_text'].format(mention=mention, name=member.first_name, id=member.id)
             msg = await update.message.reply_text(msg_text, parse_mode='HTML')
             
-            # Adjustable welcome timer
             timer_sec = settings.get('welcometimer', 0)
             if timer_sec > 0 and context.job_queue:
                 context.job_queue.run_once(delete_message_job, timer_sec, data={'chat_id': chat_id, 'message_id': msg.message_id})
@@ -705,7 +736,7 @@ def main():
     # Unknown Command Fallback (Must be added last)
     app.add_handler(MessageHandler(filters.COMMAND, handle_unknown_command))
 
-    print("Aoi Chan Bot Complete Suite is running...")
+    print("Aoi Chan Bot Complete Suite with Music Downloader is running...")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
