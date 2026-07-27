@@ -47,6 +47,9 @@ def get_tg_emoji(emoji_name: str, fallback: str = "✨") -> str:
     return fallback
 
 def extract_premium_emoji_text(message) -> str:
+    """
+    Message ထဲတွင်ပါသော Custom Premium Emoji များကို <tg-emoji> HTML tag သို့ အလိုအလျောက် ပြောင်းလဲပေးသည့် Function
+    """
     if not message or not message.text:
         return ""
 
@@ -111,14 +114,10 @@ COMMAND_HELP = {
     "permission": "• Usage: `/permission on` သို့မဟုတ် `/permission off`",
     "setopen": "• Usage: `/setopen [စာသား]`",
     "setclosed": "• Usage: `/setclosed [စာသား]`",
-    "opentimer": "• Usage: `/opentimer [အချိန်]`",
-    "closedtimer": "• Usage: `/closedtimer [အချိန်]`",
     "welcome": "• Usage: `/welcome on` သို့မဟုတ် `/welcome off`",
     "setwelcome": "• Usage: `/setwelcome [စာသား]`",
-    "welcometimer": "• Usage: `/welcometimer [စက္ကန့်]`",
     "goodbye": "• Usage: `/goodbye on` သို့မဟုတ် `/goodbye off`",
     "setgoodbye": "• Usage: `/setgoodbye [စာသား]`",
-    "goodbyetimer": "• Usage: `/goodbyetimer [စက္ကန့်]`",
     "mlbb": "• Usage: Customer ID စာကို Reply ပြန်ပြီး `/mlbb` သို့မဟုတ် `/idcopy` ဟု ရိုက်ပါ။",
     "idcopy": "• Usage: Customer ID စာကို Reply ပြန်ပြီး `/idcopy` သို့မဟုတ် `/mlbb` ဟု ရိုက်ပါ။",
     "idcopytoggle": "• Usage: `/idcopytoggle on` သို့မဟုတ် `/idcopytoggle off`",
@@ -149,14 +148,10 @@ def get_chat_settings(chat_id: int) -> dict:
         'open': True,
         'open_text': "🏪 Group ကို အခုပဲ ဖွင့်လိုက်ပါပြီရှင်! ဈေးရောင်း/ဝယ် ပြုလုပ်နိုင်ပါပြီ။",
         'closed_text': "🔒 Group ကို ခဏ ပိတ်ထားပါသည်ရှင်! စာပို့ခွင့် ခေတ္တ ပိတ်ထားပါသည်။",
-        'opentimer_job': None,
-        'closedtimer_job': None,
         'welcome': False,
         'welcome_text': "မင်္ဂလာပါ {mention} ရှင်! {name} မှ ကြိုဆိုပါတယ် ✨",
-        'welcometimer': 0,
         'goodbye': False,
         'goodbye_text': "{name} ထွက်သွားပါပြီ 😢",
-        'goodbyetimer': 0,
         'idcopy': True,
         'replydone': False,
         'replydone_text': "ထည့်ပြီးပါပြီရှင့်✔️\nကျေးဇူးတင်ပါတယ်ရှင့်\nနောက်လည်းလာခဲ့ပါအုံးနော်",
@@ -264,10 +259,12 @@ async def cmd_idcopy_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_replydone(update: Update, context: ContextTypes.DEFAULT_TYPE): await toggle_setting(update, context, 'replydone', 'Reply Done Buttons')
 
 async def cmd_recdone(update: Update, context: ContextTypes.DEFAULT_TYPE): 
-    await toggle_setting(update, context, 'recdone', 'Reaction Order Done')
+    await toggle_setting(update, context, 'recdone', 'Reaction Auto Done')
 
 async def cmd_setrecdone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
+    
+    # Premium Emoji Format များပါ သိမ်းဆည်းနိုင်ရန် ပြင်ဆင်ထားပါသည်
     formatted_text = extract_premium_emoji_text(update.message)
     if not formatted_text:
         full_text = update.message.text.partition(' ')[2].strip()
@@ -304,7 +301,7 @@ async def cmd_idcopy_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(response_text, parse_mode='HTML')
 
 # -------------------------------------------------------------------
-# Message Reaction Handler (Triggered on Emoji Reaction)
+# Message Reaction Handler (Admin Emoji React ပြုလုပ်မှ စာပြန်မည့်စနစ်)
 # -------------------------------------------------------------------
 async def handle_reaction_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reaction = update.message_reaction
@@ -314,18 +311,18 @@ async def handle_reaction_events(update: Update, context: ContextTypes.DEFAULT_T
     chat_id = reaction.chat.id
     settings = get_chat_settings(chat_id)
 
-    # Make sure recdone is enabled
+    # recdone status စစ်ဆေးခြင်း
     if not settings.get('recdone', False):
         return
 
-    # Ensure the person reacting is an Admin
+    # React လုပ်သူမှာ Admin ဟုတ်မဟုတ် စစ်ဆေးခြင်း
     user_id = reaction.user.id if reaction.user else None
     if user_id:
         member = await context.bot.get_chat_member(chat_id, user_id)
         if member.status not in ['creator', 'administrator']:
             return
 
-    # Trigger only when an admin adds a new reaction emoji
+    # Admin မှ Emoji React အသစ်လုပ်လိုက်ပါက Done Message ပို့ပေးခြင်း
     if reaction.new_reaction:
         message_id = reaction.message_id
         done_text = settings.get('recdone_text', 'Order Completed! Thank you ❤️')
@@ -335,12 +332,12 @@ async def handle_reaction_events(update: Update, context: ContextTypes.DEFAULT_T
                 chat_id=chat_id,
                 text=done_text,
                 reply_to_message_id=message_id,
-                parse_mode='HTML'
+                parse_mode='HTML' # Premium Emojis ပေါ်နိုင်ရန် HTML အသုံးပြုထားပါသည်
             )
         except Exception as e:
             logging.error(f"Failed to send recdone reaction reply: {e}")
 
-# Message Events (For Open/Closed, Filters, Math, Links)
+# Message Events (Permission, Calculator & Link Blocks)
 async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text: return
     chat_id = update.effective_chat.id
@@ -377,9 +374,17 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("<b>Aoi Chan Commands List:</b>\n\n• /recdone on/off\n• /setrecdone [text]\n• /idcopy (Reply to msg)\n• /linkblock on/off", parse_mode='HTML')
 
-# Main Setup
+# -------------------------------------------------------------------
+# Application Main Function
+# -------------------------------------------------------------------
 def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    # Telegram Reaction Updates ဖတ်ခွင့်ပြုရန် allowed_updates သတ်မှတ်ထားပါသည်
+    app = (
+        ApplicationBuilder()
+        .token(BOT_TOKEN)
+        .allowed_updates(["message", "edited_message", "message_reaction"])
+        .build()
+    )
 
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
@@ -404,13 +409,13 @@ def main():
     app.add_handler(CommandHandler("setrecdone", cmd_setrecdone))
     app.add_handler(CommandHandler("calculator", cmd_calculator))
 
-    # Reaction Listener
+    # Reaction Event Listener
     app.add_handler(MessageReactionHandler(handle_reaction_events))
 
-    # Normal Text Listener
+    # General Text Message Listener
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message_events))
 
-    app.run_polling()
+    app.run_polling(allowed_updates=["message", "edited_message", "message_reaction"])
 
 if __name__ == "__main__":
     main()
