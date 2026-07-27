@@ -145,25 +145,31 @@ async def cmd_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(info_text, parse_mode='HTML')
 
 # -------------------------------------------------------------------
-# 3. Open / Closed & Timers System (With Try-Except & Restrict Error handling)
+# 3. Open / Closed & Timers System (Updated for Telegram API v20+)
 # -------------------------------------------------------------------
 
 async def open_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     settings = get_chat_settings(chat_id)
     permissions = ChatPermissions(
         can_send_messages=True,
-        can_send_media_messages=True,
+        can_send_audios=True,
+        can_send_documents=True,
+        can_send_photos=True,
+        can_send_videos=True,
+        can_send_video_notes=True,
+        can_send_voice_notes=True,
+        can_send_polls=True,
         can_send_other_messages=True,
         can_add_web_page_previews=True
     )
     try:
-        await context.bot.set_chat_permissions(chat_id, permissions)
+        await context.bot.set_chat_permissions(chat_id=chat_id, permissions=permissions)
         await context.bot.send_message(chat_id=chat_id, text=settings['open_text'])
     except Exception as e:
         logging.error(f"Failed to open group: {e}")
         await context.bot.send_message(
             chat_id=chat_id, 
-            text=f"⚠️ Group ဖွင့်ရာတွင် အမှားအယွင်း ရှိနေပါသည် (Bot တွင် Restrict Members Admin Permission ရှိမရှိ စစ်ပေးပါ):\n`{e}`", 
+            text=f"⚠️ **Group ဖွင့်ရာတွင် Error တက်နေပါသည်:**\n(Bot တွင် `Ban Users` သို့မဟုတ် `Restrict Members` Admin Right ရှိမရှိ စစ်ဆေးပေးပါ)\n\nError: `{e}`", 
             parse_mode='Markdown'
         )
 
@@ -171,18 +177,24 @@ async def close_group(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     settings = get_chat_settings(chat_id)
     permissions = ChatPermissions(
         can_send_messages=False,
-        can_send_media_messages=False,
+        can_send_audios=False,
+        can_send_documents=False,
+        can_send_photos=False,
+        can_send_videos=False,
+        can_send_video_notes=False,
+        can_send_voice_notes=False,
+        can_send_polls=False,
         can_send_other_messages=False,
         can_add_web_page_previews=False
     )
     try:
-        await context.bot.set_chat_permissions(chat_id, permissions)
+        await context.bot.set_chat_permissions(chat_id=chat_id, permissions=permissions)
         await context.bot.send_message(chat_id=chat_id, text=settings['closed_text'])
     except Exception as e:
         logging.error(f"Failed to close group: {e}")
         await context.bot.send_message(
             chat_id=chat_id, 
-            text=f"⚠️ Group ပိတ်ရာတွင် အမှားအယွင်း ရှိနေပါသည် (Bot တွင် Restrict Members Admin Permission ရှိမရှိ စစ်ပေးပါ):\n`{e}`", 
+            text=f"⚠️ **Group ပိတ်ရာတွင် Error တက်နေပါသည်:**\n(Bot တွင် `Ban Users` သို့မဟုတ် `Restrict Members` Admin Right ရှိမရှိ စစ်ဆေးပေးပါ)\n\nError: `{e}`", 
             parse_mode='Markdown'
         )
 
@@ -202,11 +214,11 @@ async def handle_open_closed_text(update: Update, context: ContextTypes.DEFAULT_
     if not await is_admin(update, context):
         return
 
-    text = update.message.text.strip().lower()
+    raw_text = update.message.text.strip().lower()
 
-    if text in ["open", "/open"]:
+    if raw_text in ["open", "/open"]:
         await open_group(chat_id, context)
-    elif text in ["closed", "close", "/closed"]:
+    elif raw_text in ["closed", "close", "/closed"]:
         await close_group(chat_id, context)
 
 async def cmd_setopen(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -752,8 +764,8 @@ def main():
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
 
-    # Open/Closed Message Handler
-    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(?i)(open|closed|close)$'), handle_open_closed_text))
+    # Open/Closed Message Handler (Regex match filter)
+    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'(?i)^\s*(open|closed|close|/open|/closed)\s*$'), handle_open_closed_text))
 
     # Event Handlers
     app.add_handler(CallbackQueryHandler(handle_buttons))
