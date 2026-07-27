@@ -16,14 +16,6 @@ from telegram.ext import (
     filters,
 )
 
-# Safe import for MessageReactionHandler to prevent crashes on older PTB versions
-try:
-    from telegram.ext import MessageReactionHandler
-    HAS_REACTION = True
-except ImportError:
-    MessageReactionHandler = None
-    HAS_REACTION = False
-
 # -------------------------------------------------------------------
 # Configuration & Setup
 # -------------------------------------------------------------------
@@ -237,7 +229,7 @@ async def cmd_setopen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         get_chat_settings(chat_id)['open_text'] = text
         await update.message.reply_text("✅ Open Message ပြောင်းလဲပြီးပါပြီ။")
     else:
-        await update.message.reply_text("❌ **Usage:** `/setopen [စာသား]`", parse_mode='Markdown')
+        await update.message.reply_text("❌ **Usage:** `/setopen [စာသား]`\n💡 **Example:** `/setopen ဆိုင်ဖွင့်ပါပြီရှင်!`", parse_mode='Markdown')
 
 async def cmd_setclosed(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
@@ -247,7 +239,7 @@ async def cmd_setclosed(update: Update, context: ContextTypes.DEFAULT_TYPE):
         get_chat_settings(chat_id)['closed_text'] = text
         await update.message.reply_text("✅ Closed Message ပြောင်းလဲပြီးပါပြီ။")
     else:
-        await update.message.reply_text("❌ **Usage:** `/setclosed [စာသား]`", parse_mode='Markdown')
+        await update.message.reply_text("❌ **Usage:** `/setclosed [စာသား]`\n💡 **Example:** `/setclosed ဆိုင်ပိတ်ပါပြီရှင်!`", parse_mode='Markdown')
 
 async def scheduled_open_job(context: ContextTypes.DEFAULT_TYPE):
     chat_id = context.job.data
@@ -276,7 +268,7 @@ async def cmd_opentimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     settings = get_chat_settings(chat_id)
 
     if not context.args:
-        await update.message.reply_text("❌ **Usage:** `/opentimer 8:00 am` သို့မဟုတ် `/opentimer 0`", parse_mode='Markdown')
+        await update.message.reply_text("❌ **Command အသုံးပြုပုံ မှားယွင်းနေပါသည်။**\n\n💡 **Example:**\n• `/opentimer 8:00 am`\n• `/opentimer 0` *( Timer ပိတ်ရန် )*", parse_mode='Markdown')
         return
 
     val = " ".join(context.args)
@@ -310,7 +302,7 @@ async def cmd_closedtimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     settings = get_chat_settings(chat_id)
 
     if not context.args:
-        await update.message.reply_text("❌ **Usage:** `/closedtimer 11:00 pm` သို့မဟုတ် `/closedtimer 0`", parse_mode='Markdown')
+        await update.message.reply_text("❌ **Command အသုံးပြုပုံ မှားယွင်းနေပါသည်။**\n\n💡 **Example:**\n• `/closedtimer 11:00 pm`\n• `/closedtimer 0` *( Timer ပိတ်ရန် )*", parse_mode='Markdown')
         return
 
     val = " ".join(context.args)
@@ -352,7 +344,7 @@ async def cmd_setwelcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
         get_chat_settings(update.effective_chat.id)['welcome_text'] = text
         await update.message.reply_text("✅ Welcome Message ပြောင်းလဲပြီးပါပြီ။")
     else:
-        await update.message.reply_text("❌ **Usage:** `/setwelcome [စာသား]`", parse_mode='Markdown')
+        await update.message.reply_text("❌ **Usage:** `/setwelcome [စာသား]`\n💡 **Example:** `/setwelcome မင်္ဂလာပါ {mention} ရှင်!`", parse_mode='Markdown')
 
 async def cmd_welcometimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
@@ -361,7 +353,7 @@ async def cmd_welcometimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         get_chat_settings(update.effective_chat.id)['welcometimer'] = sec
         await update.message.reply_text(f"✅ Welcome Timer ကို {sec} စက္ကန့် သတ်မှတ်လိုက်ပါပြီ။")
     else:
-        await update.message.reply_text("❌ **Usage:** `/welcometimer [စက္ကန့်]`", parse_mode='Markdown')
+        await update.message.reply_text("❌ **Usage:** `/welcometimer [စက္ကန့်]`\n💡 **Example:** `/welcometimer 120` *(၁၂၀ စက္ကန့်အကြာတွင် ဖျက်မည်)*", parse_mode='Markdown')
 
 async def cmd_goodbye(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await toggle_setting(update, context, 'goodbye', 'Goodbye Message')
@@ -373,7 +365,7 @@ async def cmd_setgoodbye(update: Update, context: ContextTypes.DEFAULT_TYPE):
         get_chat_settings(update.effective_chat.id)['goodbye_text'] = text
         await update.message.reply_text("✅ Goodbye Message ပြောင်းလဲပြီးပါပြီ။")
     else:
-        await update.message.reply_text("❌ **Usage:** `/setgoodbye [စာသား]`", parse_mode='Markdown')
+        await update.message.reply_text("❌ **Usage:** `/setgoodbye [စာသား]`\n💡 **Example:** `/setgoodbye {name} ထွက်သွားပါပြီ`", parse_mode='Markdown')
 
 async def cmd_goodbyetimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
@@ -382,10 +374,10 @@ async def cmd_goodbyetimer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         get_chat_settings(update.effective_chat.id)['goodbyetimer'] = sec
         await update.message.reply_text(f"✅ Goodbye Timer ကို {sec} စက္ကန့် သတ်မှတ်လိုက်ပါပြီ။")
     else:
-        await update.message.reply_text("❌ **Usage:** `/goodbyetimer [စက္ကန့်]`", parse_mode='Markdown')
+        await update.message.reply_text("❌ **Usage:** `/goodbyetimer [စက္ကန့်]`\n💡 **Example:** `/goodbyetimer 60`", parse_mode='Markdown')
 
 # -------------------------------------------------------------------
-# 5. Store & MLBB ID Tools
+# 5. Store & MLBB ID Tools (Including Reply Auto-extract ID System)
 # -------------------------------------------------------------------
 
 async def cmd_idcopy_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -424,11 +416,14 @@ async def send_mlbb_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Here is the requested ID:", reply_markup=markup)
 
 async def cmd_idcopy_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Reply ပြန်ထားသော စာ ရှိမရှိ စစ်ဆေးခြင်း
     if not update.message.reply_to_message or not update.message.reply_to_message.text:
         await update.message.reply_text("⚠️ Customer ၏ Game ID စာကို Reply ပြန်ပြီး `/idcopy` သို့မဟုတ် `/id` ဟု အသုံးပြုပါရှင်။", parse_mode='Markdown')
         return
 
     text = update.message.reply_to_message.text
+
+    # စာထဲမှ ဂဏန်းများကို သီးသန့် ရှာဖွေခြင်း (Regex)
     numbers = re.findall(r'\d+', text)
 
     if not numbers:
@@ -467,31 +462,6 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = get_chat_settings(chat_id).get('replydone_text')
         await query.message.reply_text(text)
 
-# Auto Reaction Done Handler
-async def handle_reaction_done(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    reaction_update = update.message_reaction
-    if not reaction_update:
-        return
-
-    chat_id = reaction_update.chat.id
-    settings = get_chat_settings(chat_id)
-
-    if not settings.get('recdone', False):
-        return
-
-    if reaction_update.new_reaction:
-        message_id = reaction_update.message_id
-        text = settings.get('replydone_text', "ထည့်ပြီးပါပြီရှင့်✔️\nကျေးဇူးတင်ပါတယ်ရှင့်\nနောက်လည်းလာခဲ့ပါအုံးနော်")
-        
-        try:
-            await context.bot.send_message(
-                chat_id=chat_id,
-                text=text,
-                reply_to_message_id=message_id
-            )
-        except Exception as e:
-            logging.error(f"Failed to send recdone message: {e}")
-
 # -------------------------------------------------------------------
 # 6. Custom Filters
 # -------------------------------------------------------------------
@@ -501,7 +471,13 @@ async def cmd_setfilter(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     args = context.args
     if not args:
-        await update.message.reply_text("❌ **Usage:** `/setfilter [keyword] [text]`", parse_mode='Markdown')
+        await update.message.reply_text(
+            "❌ **Command အသုံးပြုပုံ မှားယွင်းနေပါသည်။**\n\n"
+            "💡 **Example:**\n"
+            "• `/setfilter kpay 09123456789`\n"
+            "• `/setfilter wave 09987654321`",
+            parse_mode='Markdown'
+        )
         return
     
     keyword = args[0].lower()
@@ -570,7 +546,12 @@ async def cmd_resetall(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("❌ **Usage:** `/music [song name]`", parse_mode='Markdown')
+        await update.message.reply_text(
+            "❌ **Command အသုံးပြုပုံ မှားယွင်းနေပါသည်။**\n\n"
+            "💡 **Example:**\n"
+            "• `/music like jennie`",
+            parse_mode='Markdown'
+        )
         return
 
     song_name = " ".join(context.args)
@@ -581,7 +562,7 @@ async def cmd_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response = requests.get(search_url, timeout=10).json()
 
         if not response.get('data'):
-            await status_msg.edit_text("❌ သီချင်း ရှာမတွေ့ပါရှင်။")
+            await status_msg.edit_text("❌ သီချင်း ရှာမတွေ့ပါရှင်။ စာလုံးပေါင်း ပြန်စစ်ပေးပါ သို့မဟုတ် အဆိုတော် နာမည်ပါ ထည့်ရိုက်ပေးပါရှင်။")
             return
 
         track = response['data'][0]
@@ -601,11 +582,12 @@ async def cmd_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption=f"✨ **{title}** - {artist}\n🎵 *Aoi Chan Music System*",
             parse_mode='Markdown'
         )
+        
         await status_msg.delete()
 
     except Exception as e:
         logging.error(f"Music API error: {e}")
-        await status_msg.edit_text("❌ သီချင်း ရှာဖွေရာတွင် အမှားအယွင်း ရှိနေပါသည်။")
+        await status_msg.edit_text("❌ သီချင်း ရှာဖွေရာတွင် အမှားအယွင်း ရှိနေပါသည်။ ခဏနေမှ ပြန်စမ်းပေးပါရှင်။")
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
@@ -816,34 +798,21 @@ def main():
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
 
-    # Open/Closed Message Handler
+    # Open/Closed Message Handler (Regex match filter)
     app.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'(?i)^\s*(open|closed|close|/open|/closed)\s*$'), handle_open_closed_text))
 
     # Event Handlers
     app.add_handler(CallbackQueryHandler(handle_buttons))
-    
-    # Add Reaction Handler safely if supported
-    if HAS_REACTION and MessageReactionHandler:
-        app.add_handler(MessageReactionHandler(handle_reaction_done))
-
     app.add_handler(ChatMemberHandler(handle_member_status_change, ChatMemberHandler.CHAT_MEMBER))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_members))
     app.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_member))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message_events))
 
-    # Unknown Command Fallback
+    # Unknown Command Fallback (Must be added last)
     app.add_handler(MessageHandler(filters.COMMAND, handle_unknown_command))
 
-    # Build allowed_updates dynamically
-    allowed_updates = ["message", "edited_message", "callback_query", "chat_member"]
-    if HAS_REACTION:
-        allowed_updates.append("message_reaction")
-
     print("Aoi Chan Bot is running...")
-    app.run_polling(
-        allowed_updates=allowed_updates,
-        drop_pending_updates=True
-    )
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
