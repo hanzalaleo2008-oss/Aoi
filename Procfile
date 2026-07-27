@@ -1,0 +1,1 @@
+worker: python aoi_chan.py
