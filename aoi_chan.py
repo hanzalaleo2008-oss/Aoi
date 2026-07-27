@@ -460,10 +460,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = get_chat_settings(chat_id).get('replydone_text')
         await query.message.reply_text(text)
 
-# -------------------------------------------------------------------
-# Auto Reaction Done Handler (Fixed Recdone)
-# -------------------------------------------------------------------
-
+# Auto Reaction Done Handler
 async def handle_reaction_done(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reaction_update = update.message_reaction
     if not reaction_update:
@@ -475,7 +472,6 @@ async def handle_reaction_done(update: Update, context: ContextTypes.DEFAULT_TYP
     if not settings.get('recdone', False):
         return
 
-    # Reaction ပေးလိုက်သည့်အခါ အလိုအလျောက် စာပြန်ပေးခြင်း
     if reaction_update.new_reaction:
         message_id = reaction_update.message_id
         text = settings.get('replydone_text', "ထည့်ပြီးပါပြီရှင့်✔️\nကျေးဇူးတင်ပါတယ်ရှင့်\nနောက်လည်းလာခဲ့ပါအုံးနော်")
@@ -640,4 +636,198 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /replydone on/off | /setreplydone\n"
         "• /recdone on/off | /calculator on/off\n\n"
         "<b>💬 6. Custom Filters</b>\n"
-        "• /setfilter
+        "• /setfilter [keyword] [text]\n"
+        "• /deletefilter [keyword]\n\n"
+        "<b>🔨 7. Moderation</b>\n"
+        "• /ban | /unban | /mute | /kick | /resetall\n\n"
+        "<b>🎵 8. Music Downloader</b>\n"
+        "• /music [song name]\n"
+    )
+    await update.message.reply_text(help_text, parse_mode='HTML')
+
+# -------------------------------------------------------------------
+# Event Handlers
+# -------------------------------------------------------------------
+
+async def handle_member_status_change(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    result = update.chat_member
+    if not result: return
+    chat_id = result.chat.id
+    settings = get_chat_settings(chat_id)
+
+    old_status = result.old_chat_member.status
+    new_status = result.new_chat_member.status
+
+    if settings.get('autoban', False):
+        if old_status in ['member', 'administrator'] and new_status in ['left', 'kicked']:
+            user_id = result.from_user.id
+            try:
+                await context.bot.ban_chat_member(chat_id, user_id)
+            except Exception as e:
+                logging.error(f"Failed to autoban user: {e}")
+
+async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text: return
+    chat_id = update.effective_chat.id
+    settings = get_chat_settings(chat_id)
+    user = update.effective_user
+    text = update.message.text.strip()
+
+    # Link Block
+    if settings.get('linkblock', False) and not await is_admin(update, context):
+        if "http://" in text or "https://" in text or "t.me" in text:
+            await update.message.delete()
+            return
+
+    # Auto Calculator
+    if settings.get('calculator', True):
+        if re.match(r'^[0-9\+\-\*\/\(\)\.\s]+$', text) and any(op in text for op in ['+', '-', '*', '/']):
+            try:
+                result = eval(text, {"__builtins__": None}, {})
+                formatted = f"{int(result):,}" if isinstance(result, float) and result.is_integer() else f"{result:,}"
+                await update.message.reply_text(f"<code>{formatted}</code> ပါရှင့်!", parse_mode='HTML')
+                return
+            except Exception:
+                pass
+
+    # Custom Filter
+    if chat_id in custom_filters:
+        msg_text = text.lower()
+        for kw, reply in custom_filters[chat_id].items():
+            if kw in msg_text:
+                await update.message.reply_text(reply)
+                break
+
+    # Tracking
+    if settings.get('track', False) and user:
+        user_history.setdefault(user.id, []).append({
+            'date': datetime.now().strftime("%Y-%m-%d"),
+            'username': user.username,
+            'first_name': user.first_name
+        })
+
+async def handle_new_members(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    settings = get_chat_settings(chat_id)
+
+    if settings.get('joineddelete', False):
+        try:
+            await update.message.delete()
+        except Exception as e:
+            logging.error(f"Failed to delete join message: {e}")
+
+    if settings.get('welcome', False):
+        for member in update.message.new_chat_members:
+            mention = f"<a href='tg://user?id={member.id}'>{member.first_name}</a>"
+            msg_text = settings['welcome_text'].format(mention=mention, name=member.first_name, id=member.id)
+            msg = await update.message.reply_text(msg_text, parse_mode='HTML')
+            
+            timer_sec = settings.get('welcometimer', 0)
+            if timer_sec > 0 and context.job_queue:
+                context.job_queue.run_once(delete_message_job, timer_sec, data={'chat_id': chat_id, 'message_id': msg.message_id})
+
+async def handle_left_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    settings = get_chat_settings(chat_id)
+
+    if settings.get('autoban', False):
+        try:
+            await context.bot.ban_chat_member(chat_id, update.message.left_chat_member.id)
+        except Exception as e:
+            logging.error(f"Failed to ban left member: {e}")
+
+    if settings.get('goodbye', False):
+        user = update.message.left_chat_member
+        msg_text = settings['goodbye_text'].format(name=user.first_name, id=user.id)
+        msg = await update.message.reply_text(msg_text)
+        
+        timer_sec = settings.get('goodbyetimer', 0)
+        if timer_sec > 0 and context.job_queue:
+            context.job_queue.run_once(delete_message_job, timer_sec, data={'chat_id': chat_id, 'message_id': msg.message_id})
+
+async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "❌ **ဒီ Command မရှိပါရှင်!**\n\n"
+        "ရရှိနိုင်သော Command များ အားလုံးကို ကြည့်ရှုရန် /help ကို နှိပ်ပါရှင်။",
+        parse_mode='Markdown'
+    )
+
+# -------------------------------------------------------------------
+# Main App Initialization
+# -------------------------------------------------------------------
+
+def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    # Security
+    app.add_handler(CommandHandler("forwardblock", cmd_forwardblock))
+    app.add_handler(CommandHandler("linkblock", cmd_linkblock))
+    app.add_handler(CommandHandler("autoban", cmd_autoban))
+    app.add_handler(CommandHandler("joineddelete", cmd_joineddelete))
+
+    # Tracking & Info
+    app.add_handler(CommandHandler("track", cmd_track))
+    app.add_handler(CommandHandler("check", cmd_check))
+    app.add_handler(CommandHandler("info", cmd_info))
+
+    # Open/Closed
+    app.add_handler(CommandHandler("permission", cmd_permission))
+    app.add_handler(CommandHandler("setopen", cmd_setopen))
+    app.add_handler(CommandHandler("setclosed", cmd_setclosed))
+    app.add_handler(CommandHandler("opentimer", cmd_opentimer))
+    app.add_handler(CommandHandler("closedtimer", cmd_closedtimer))
+
+    # Welcome & Goodbye
+    app.add_handler(CommandHandler("welcome", cmd_welcome))
+    app.add_handler(CommandHandler("setwelcome", cmd_setwelcome))
+    app.add_handler(CommandHandler("welcometimer", cmd_welcometimer))
+    app.add_handler(CommandHandler("goodbye", cmd_goodbye))
+    app.add_handler(CommandHandler("setgoodbye", cmd_setgoodbye))
+    app.add_handler(CommandHandler("goodbyetimer", cmd_goodbyetimer))
+
+    # Store & Tools
+    app.add_handler(CommandHandler(["idcopy", "id"], cmd_idcopy_reply))
+    app.add_handler(CommandHandler("replydone", cmd_replydone))
+    app.add_handler(CommandHandler("setreplydone", cmd_setreplydone))
+    app.add_handler(CommandHandler("recdone", cmd_recdone))
+    app.add_handler(CommandHandler("calculator", cmd_calculator))
+    app.add_handler(CommandHandler("mlbb", send_mlbb_id))
+
+    # Filters
+    app.add_handler(CommandHandler("setfilter", cmd_setfilter))
+    app.add_handler(CommandHandler("deletefilter", cmd_deletefilter))
+
+    # Moderation
+    app.add_handler(CommandHandler("ban", cmd_ban))
+    app.add_handler(CommandHandler("unban", cmd_unban))
+    app.add_handler(CommandHandler("mute", cmd_mute))
+    app.add_handler(CommandHandler("kick", cmd_kick))
+    app.add_handler(CommandHandler("resetall", cmd_resetall))
+
+    # General & Music
+    app.add_handler(CommandHandler("music", cmd_music))
+    app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("help", cmd_help))
+
+    # Open/Closed Message Handler
+    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'(?i)^\s*(open|closed|close|/open|/closed)\s*$'), handle_open_closed_text))
+
+    # Event Handlers
+    app.add_handler(CallbackQueryHandler(handle_buttons))
+    app.add_handler(MessageReactionHandler(handle_reaction_done))
+    app.add_handler(ChatMemberHandler(handle_member_status_change, ChatMemberHandler.CHAT_MEMBER))
+    app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_members))
+    app.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_member))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message_events))
+
+    # Unknown Command Fallback
+    app.add_handler(MessageHandler(filters.COMMAND, handle_unknown_command))
+
+    print("Aoi Chan Bot is running...")
+    app.run_polling(
+        allowed_updates=["message", "edited_message", "callback_query", "chat_member", "message_reaction"],
+        drop_pending_updates=True
+    )
+
+if __name__ == "__main__":
+    main()
