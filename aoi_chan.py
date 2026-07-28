@@ -4,7 +4,6 @@ import re
 import ast
 import operator
 import requests
-from datetime import datetime
 
 from telegram import Update, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -16,10 +15,17 @@ from telegram.ext import (
     filters,
 )
 
+# PyTgCalls & yt-dlp for Real Music Voice Chat Streaming
+from pytgcalls import PyTgCalls
+from pytgcalls.types import AudioPiped
+from yt_dlp import YoutubeDL
+
 # -------------------------------------------------------------------
-# Configuration & Setup (Lines 1 - 30)
+# Configuration & Setup
 # -------------------------------------------------------------------
 BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
+API_ID = int(os.getenv("API_ID", "123456"))
+API_HASH = os.getenv("API_HASH", "YOUR_API_HASH_HERE")
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -31,6 +37,8 @@ user_history = {}
 custom_filters = {}
 user_notes = {}
 user_warnings = {}
+
+pytgcalls = None
 
 PREMIUM_EMOJIS = {
     "sparkle": "5368324170671202286",
@@ -45,8 +53,8 @@ VALID_COMMANDS = {
     "idcopytoggle", "mlbb", "id", "idcopy", "replydone", "recdone",
     "setrecdone", "calculator", "setfilter", "deletefilter",
     "ban", "unban", "mute", "kick", "play", "stop", "skip", "queue",
-    "note", "notes", "clearNotes", "warn", "warnings", "clearwarn",
-    "ping", "serverinfo", "poll", "dice", "weather", "about"
+    "note", "notes", "clearnotes", "warn", "warnings", "clearwarn",
+    "ping", "serverinfo", "dice", "about"
 }
 
 def extract_premium_emoji_text(message) -> str:
@@ -259,7 +267,7 @@ async def cmd_setgoodbye(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("✅ Goodbye Message ပြောင်းပြီးပါပြီရှင် ✨", parse_mode='HTML')
 
 # -------------------------------------------------------------------
-# Telegraph Page Generator Function
+# Telegraph Generator
 # -------------------------------------------------------------------
 async def cmd_telegraph(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message.reply_to_message or not update.message.reply_to_message.text:
@@ -341,18 +349,46 @@ async def cmd_idcopy_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(response_text, parse_mode='HTML')
 
 # -------------------------------------------------------------------
-# Music Commands
+# Real Music Voice Chat Streaming Commands
 # -------------------------------------------------------------------
 async def cmd_play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("⚠️ ကျေးဇူးပြု၍ ဖွင့်လိုသော သီချင်းနာမည် သို့မဟုတ် Link ထည့်ပေးပါရှင်။ ဥပမာ: `/play [Song Name]`", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ ဖွင့်လိုသော သီချင်းနာမည် သို့မဟုတ် YouTube Link ထည့်ပေးပါရှင်။ ဥပမာ: `/play [Song Name]`", parse_mode='Markdown')
         return
+
     query = " ".join(context.args)
-    await update.message.reply_text(f"🎵 <b>Searching & Playing:</b> <code>{query}</code>\nခဏစောင့်ပေးပါရှင် ✨", parse_mode='HTML')
+    chat_id = update.effective_chat.id
+    msg = await update.message.reply_text(f"🎵 <b>Searching & Streaming:</b> <code>{query}</code>\nခဏစောင့်ပေးပါရှင် ✨", parse_mode='HTML')
+
+    try:
+        ydl_opts = {'format': 'bestaudio', 'noplaylist': True, 'quiet': True}
+        with YoutubeDL(ydl_opts) as ydl:
+            if query.startswith("http"):
+                info = ydl.extract_info(query, download=False)
+            else:
+                info = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
+            
+            audio_url = info['url']
+            title = info.get('title', 'Unknown Title')
+
+        if pytgcalls:
+            await pytgcalls.join_group_call(chat_id, AudioPiped(audio_url))
+            await msg.edit_text(f"🎶 <b>Now Playing in Voice Chat:</b>\n• <b>Title:</b> {title}", parse_mode='HTML')
+        else:
+            await msg.edit_text(f"🎵 <b>Playing:</b> {title} (Voice chat client not initialized)", parse_mode='HTML')
+    except Exception as e:
+        logging.error(f"Play error: {e}")
+        await msg.edit_text(f"❌ သီချင်းဖွင့်ရာတွင် အမှားအယွင်း ဖြစ်သွားပါပြီရှင်: {e}")
 
 async def cmd_stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
-    await update.message.reply_text("⏹️ သီချင်းဖွင့်ခြင်းကို ရပ်ဆိုင်းလိုက်ပါပြီရှင်။", parse_mode='HTML')
+    chat_id = update.effective_chat.id
+    try:
+        if pytgcalls:
+            await pytgcalls.leave_group_call(chat_id)
+        await update.message.reply_text("⏹️ Voice Chat မှ သီချင်းဖွင့်ခြင်းကို ရပ်ဆိုင်းလိုက်ပါပြီရှင်။", parse_mode='HTML')
+    except Exception as e:
+        await update.message.reply_text(f"❌ အမှားအယွင်းရှိပါသည်: {e}")
 
 async def cmd_skip(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
@@ -362,7 +398,7 @@ async def cmd_queue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🎶 <b>Current Music Queue:</b>\n• (လက်ရှိတွင် သီချင်းစာရင်း အလွတ်ဖြစ်နေပါသည်)", parse_mode='HTML')
 
 # -------------------------------------------------------------------
-# Advanced Features Added (Notes, Warnings, Utilities)
+# Notes & Warnings Features
 # -------------------------------------------------------------------
 async def cmd_note(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
@@ -446,10 +482,10 @@ async def cmd_dice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_dice(chat_id=update.effective_chat.id, emoji="🎲")
 
 async def cmd_about(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🤖 <b>Aoi Chan Bot v2.5</b>\nDeveloped with love for high-performance Telegram group management! 💕", parse_mode='HTML')
+    await update.message.reply_text("🤖 <b>Aoi Chan Bot v3.0</b>\nDeveloped with love for high-performance Telegram group management! 💕", parse_mode='HTML')
 
 # -------------------------------------------------------------------
-# Custom Filters & Moderation Commands
+# Custom Filters & Admin Moderation Commands
 # -------------------------------------------------------------------
 async def cmd_setfilter(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
@@ -581,7 +617,6 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text(custom_filters[chat_id][raw_text], parse_mode='HTML')
         return
 
-    # Check for saved notes text trigger
     chat_notes = user_notes.get(chat_id, {})
     if raw_text in chat_notes:
         await update.message.reply_text(chat_notes[raw_text], parse_mode='HTML')
@@ -609,37 +644,31 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = (
-        "<b>✨ Aoi Chan Commands List (Extended Version) ✨</b>\n\n"
+        "<b>✨ Aoi Chan Complete Commands List ✨</b>\n\n"
         "<b>🛡️ 1. Security & Protection</b>\n"
-        "• <code>/forwardblock on/off</code> - Forward စာများ ပိတ်/ဖွင့်\n"
-        "• <code>/linkblock on/off</code> - Link များ ပိတ်/ဖွင့်\n"
-        "• <code>/autoban on/off</code> - ထွက်သွားသူများကို Auto-Ban\n"
-        "• <code>/joineddelete on/off</code> - Joined စာများ ဖျက်ရန်\n\n"
+        "• <code>/forwardblock on/off</code> | <code>/linkblock on/off</code>\n"
+        "• <code>/autoban on/off</code> | <code>/joineddelete on/off</code>\n\n"
         "<b>🏪 2. Group Management & Notes</b>\n"
-        "• <code>/permission on/off</code> - Open/Closed စနစ်\n"
-        "• <code>/note [title] [text]</code> - Note အသစ်မှတ်ရန်\n"
-        "• <code>/notes</code> - မှတ်ထားသော Notes များကိုကြည့်ရန်\n"
-        "• <code>/warn</code> - အပြစ်ပေးသတိပေးရန်\n"
-        "• <code>/warnings</code> - သတိပေးချက်အရေအတွက်ကြည့်ရန်\n\n"
-        "<b>🎵 3. Music Player System</b>\n"
+        "• <code>/permission on/off</code> | <code>/note [title] [text]</code>\n"
+        "• <code>/notes</code> | <code>/warn</code> | <code>/warnings</code>\n\n"
+        "<b>🎵 3. Music Voice Chat Player</b>\n"
         "• <code>/play [Song/Link]</code> - သီချင်းစတင်ဖွင့်ရန်\n"
         "• <code>/stop</code> / <code>/skip</code> / <code>/queue</code>\n\n"
         "<b>🛍️ 4. Store & Orders</b>\n"
-        "• <code>/recdone on/off</code> - Reaction Auto Done စနစ်\n"
-        "• <code>/setrecdone [Text]</code> - Done Message ပြောင်းရန်\n"
-        "• <code>/idcopy (Reply msg)</code> - Game ID သီးသန့်ထုတ်ရန်\n"
-        "• <code>/calculator on/off</code> - Auto Math စနစ်\n\n"
+        "• <code>/recdone on/off</code> | <code>/setrecdone [Text]</code>\n"
+        "• <code>/idcopy (Reply msg)</code> | <code>/calculator on/off</code>\n\n"
         "<b>⚙️ 5. Custom Filters & Admin tools</b>\n"
-        "• <code>/setfilter [key] [text]</code> - Keyword Filter မှတ်ရန်\n"
-        "• <code>/ban, /unban, /mute, /kick</code> - ချက်ချင်းအရေးယူရန်"
+        "• <code>/setfilter [key] [text]</code> | <code>/ban, /unban, /mute, /kick</code>"
     )
     keyboard = [[InlineKeyboardButton("👉 [Click Here to View Manual]", url="https://telegra.ph/Aoi-Chan-Bot--Usage-Guide--Commands-Manual-07-26")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(help_text, parse_mode='HTML', reply_markup=reply_markup)
 
 def main():
+    global pytgcalls
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
+    # Handlers Setup
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
     
@@ -674,7 +703,6 @@ def main():
     app.add_handler(CommandHandler("skip", cmd_skip))
     app.add_handler(CommandHandler("queue", cmd_queue))
 
-    # Extended Features handlers
     app.add_handler(CommandHandler("note", cmd_note))
     app.add_handler(CommandHandler("notes", cmd_notes))
     app.add_handler(CommandHandler("clearNotes", cmd_clear_notes))
