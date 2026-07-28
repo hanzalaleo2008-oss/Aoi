@@ -1,3 +1,5 @@
 python-telegram-bot[job-queue]>=20.7
 pytz==2024.1
 requests
+pytgcalls
+yt-dlp
