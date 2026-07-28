@@ -15,10 +15,8 @@ from telegram.ext import (
     filters,
 )
 
-# PyTgCalls & yt-dlp for Real Music Voice Chat Streaming
 from pytgcalls import PyTgCalls
 from pytgcalls.types import AudioPiped
-from yt_dlp import YoutubeDL
 
 # -------------------------------------------------------------------
 # Configuration & Setup
@@ -40,12 +38,6 @@ user_warnings = {}
 
 pytgcalls = None
 
-PREMIUM_EMOJIS = {
-    "sparkle": "5368324170671202286",
-    "star": "5368324170671202287",
-    "crown": "5368324170671202288",
-}
-
 VALID_COMMANDS = {
     "start", "help", "forwardblock", "linkblock", "autoban", "joineddelete",
     "track", "check", "info", "permission", "setopen", "setclosed",
@@ -60,29 +52,10 @@ VALID_COMMANDS = {
 def extract_premium_emoji_text(message) -> str:
     if not message or not message.text:
         return ""
-
     full_text = message.text.partition(' ')[2].strip()
     if not full_text:
         return ""
-
-    entities = message.entities or []
-    text_offset = message.text.find(full_text)
-    
-    formatted_text = ""
-    last_idx = text_offset
-    
-    for entity in entities:
-        if entity.offset >= text_offset:
-            formatted_text += message.text[last_idx:entity.offset]
-            if entity.type == "custom_emoji":
-                emoji_char = message.text[entity.offset : entity.offset + entity.length]
-                formatted_text += f'<tg-emoji emoji-id="{entity.custom_emoji_id}">{emoji_char}</tg-emoji>'
-            else:
-                formatted_text += message.text[entity.offset : entity.offset + entity.length]
-            last_idx = entity.offset + entity.length
-
-    formatted_text += message.text[last_idx:]
-    return formatted_text
+    return full_text
 
 OPERATORS = {
     ast.Add: operator.add,
@@ -104,7 +77,6 @@ def safe_eval(expr: str):
             return OPERATORS[type(node.op)](_eval(node.operand))
         else:
             raise TypeError(f"Unsupported node type: {type(node)}")
-
     parsed = ast.parse(expr, mode='eval')
     return _eval(parsed.body)
 
@@ -181,12 +153,10 @@ async def cmd_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if update.message.reply_to_message:
         user_id = update.message.reply_to_message.from_user.id
-    
     history = user_history.get(user_id, [])
     if not history:
         await update.message.reply_text("No history recorded.")
         return
-
     text = "<b>User History Log:</b>\n"
     for item in history[-10:]:
         text += f"• Name: {item['first_name']} | @{item['username']}\n"
@@ -196,7 +166,6 @@ async def cmd_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if update.message.reply_to_message:
         user = update.message.reply_to_message.from_user
-
     info_text = (
         f"<b>👤 User Information:</b>\n\n"
         f"• First Name: {user.first_name}\n"
@@ -231,16 +200,16 @@ async def cmd_permission(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_setopen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
-    formatted_text = extract_premium_emoji_text(update.message)
-    if formatted_text:
-        get_chat_settings(update.effective_chat.id)['open_text'] = formatted_text
+    text = extract_premium_emoji_text(update.message)
+    if text:
+        get_chat_settings(update.effective_chat.id)['open_text'] = text
         await update.message.reply_text("✅ Open Message ပြောင်းလဲပြီးပါပြီရှင် ✨", parse_mode='HTML')
 
 async def cmd_setclosed(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
-    formatted_text = extract_premium_emoji_text(update.message)
-    if formatted_text:
-        get_chat_settings(update.effective_chat.id)['closed_text'] = formatted_text
+    text = extract_premium_emoji_text(update.message)
+    if text:
+        get_chat_settings(update.effective_chat.id)['closed_text'] = text
         await update.message.reply_text("✅ Closed Message ပြောင်းလဲပြီးပါပြီရှင် ✨", parse_mode='HTML')
 
 # -------------------------------------------------------------------
@@ -254,16 +223,16 @@ async def cmd_goodbye(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_setwelcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
-    formatted_text = extract_premium_emoji_text(update.message)
-    if formatted_text:
-        get_chat_settings(update.effective_chat.id)['welcome_text'] = formatted_text
+    text = extract_premium_emoji_text(update.message)
+    if text:
+        get_chat_settings(update.effective_chat.id)['welcome_text'] = text
         await update.message.reply_text("✅ Welcome Message ပြောင်းပြီးပါပြီရှင် ✨", parse_mode='HTML')
 
 async def cmd_setgoodbye(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
-    formatted_text = extract_premium_emoji_text(update.message)
-    if formatted_text:
-        get_chat_settings(update.effective_chat.id)['goodbye_text'] = formatted_text
+    text = extract_premium_emoji_text(update.message)
+    if text:
+        get_chat_settings(update.effective_chat.id)['goodbye_text'] = text
         await update.message.reply_text("✅ Goodbye Message ပြောင်းပြီးပါပြီရှင် ✨", parse_mode='HTML')
 
 # -------------------------------------------------------------------
@@ -273,22 +242,18 @@ async def cmd_telegraph(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message.reply_to_message or not update.message.reply_to_message.text:
         await update.message.reply_text("⚠️ Telegraph ပြုလုပ်လိုသော စာကို Reply ပြန်ပြီး `/telegraph [Title]` ဟု ရိုက်ပေးပါရှင် ✨")
         return
-
     title = " ".join(context.args) if context.args else "Aoi Chan Note"
     content_text = update.message.reply_to_message.text
-
     try:
         acc_res = requests.get("https://api.telegra.ph/createAccount", params={"short_name": "AoiChan"}).json()
         access_token = acc_res['result']['access_token']
         content_json = [{"tag": "p", "children": [content_text]}]
-
         page_res = requests.post("https://api.telegra.ph/createPage", data={
             "access_token": access_token,
             "title": title,
             "content": str(content_json).replace("'", '"'),
             "return_content": "false"
         }).json()
-
         if page_res.get('ok'):
             url = page_res['result']['url']
             await update.message.reply_text(f"🔗 <b>Telegraph Link ဖန်တီးပြီးပါပြီ:</b>\n{url}", parse_mode='HTML')
@@ -312,13 +277,9 @@ async def cmd_recdone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_setrecdone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
-    formatted_text = extract_premium_emoji_text(update.message)
-    if not formatted_text:
-        full_text = update.message.text.partition(' ')[2].strip()
-        formatted_text = full_text if full_text else ""
-
-    if formatted_text:
-        get_chat_settings(update.effective_chat.id)['recdone_text'] = formatted_text
+    text = extract_premium_emoji_text(update.message)
+    if text:
+        get_chat_settings(update.effective_chat.id)['recdone_text'] = text
         await update.message.reply_text("✅ Reaction Done Message ကို ပြောင်းလဲပြီးပါပြီရှင် ✨", parse_mode='HTML')
     else:
         await update.message.reply_text("⚠️ Usage: `/setrecdone Order completed! Thank you ❤️`", parse_mode='Markdown')
@@ -330,55 +291,41 @@ async def cmd_idcopy_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message.reply_to_message or not update.message.reply_to_message.text:
         await update.message.reply_text("⚠️ Customer ၏ Game ID စာကို Reply ပြန်ပြီး `/idcopy` ဟု အသုံးပြုပါရှင် 💕")
         return
-
     text = update.message.reply_to_message.text
     numbers = re.findall(r'\d+', text)
-
     if not numbers:
         await update.message.reply_text("❌ Reply ပြန်ထားသော စာထဲတွင် ID ဂဏန်းများ ရှာမတွေ့ပါရှင်။")
         return
-
     user_id = numbers[0]
     server_id = numbers[1] if len(numbers) > 1 else None
-
     if server_id:
         response_text = f"🎮 <b>MLBB ID Information:</b>\n\n• <b>Game ID:</b> <code>{user_id}</code>\n• <b>Server ID:</b> <code>{server_id}</code>"
     else:
         response_text = f"🎮 <b>MLBB ID Information:</b>\n\n• <b>Game ID:</b> <code>{user_id}</code>"
-
     await update.message.reply_text(response_text, parse_mode='HTML')
 
 # -------------------------------------------------------------------
-# Real Music Voice Chat Streaming Commands
+# Telegram API Music Voice Chat Streaming Commands
 # -------------------------------------------------------------------
 async def cmd_play(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("⚠️ ဖွင့်လိုသော သီချင်းနာမည် သို့မဟုတ် YouTube Link ထည့်ပေးပါရှင်။ ဥပမာ: `/play [Song Name]`", parse_mode='Markdown')
+    if not update.message.reply_to_message or not update.message.reply_to_message.audio:
+        await update.message.reply_text("⚠️ ကျေးဇူးပြု၍ Telegram Audio ဖိုင်ကို Reply ပြန်ပြီး `/play` ဟု ရိုက်ပေးပါရှင် 🎵", parse_mode='Markdown')
         return
-
-    query = " ".join(context.args)
     chat_id = update.effective_chat.id
-    msg = await update.message.reply_text(f"🎵 <b>Searching & Streaming:</b> <code>{query}</code>\nခဏစောင့်ပေးပါရှင် ✨", parse_mode='HTML')
-
+    audio = update.message.reply_to_message.audio
+    msg = await update.message.reply_text("🎵 <b>Streaming Telegram Audio to Voice Chat...</b> ခဏစောင့်ပါရှင် ✨", parse_mode='HTML')
     try:
-        ydl_opts = {'format': 'bestaudio', 'noplaylist': True, 'quiet': True}
-        with YoutubeDL(ydl_opts) as ydl:
-            if query.startswith("http"):
-                info = ydl.extract_info(query, download=False)
-            else:
-                info = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
-            
-            audio_url = info['url']
-            title = info.get('title', 'Unknown Title')
-
+        file = await context.bot.get_file(audio.file_id)
+        file_path = f"downloads_{audio.file_unique_id}.mp3"
+        await file.download_to_drive(file_path)
         if pytgcalls:
-            await pytgcalls.join_group_call(chat_id, AudioPiped(audio_url))
-            await msg.edit_text(f"🎶 <b>Now Playing in Voice Chat:</b>\n• <b>Title:</b> {title}", parse_mode='HTML')
+            await pytgcalls.join_group_call(chat_id, AudioPiped(file_path))
+            await msg.edit_text(f"🎶 <b>Now Playing from Telegram:</b>\n• {audio.file_name or 'Audio File'}", parse_mode='HTML')
         else:
-            await msg.edit_text(f"🎵 <b>Playing:</b> {title} (Voice chat client not initialized)", parse_mode='HTML')
+            await msg.edit_text("❌ PyTgCalls Client မရှိသေးပါရှင်။", parse_mode='HTML')
     except Exception as e:
         logging.error(f"Play error: {e}")
-        await msg.edit_text(f"❌ သီချင်းဖွင့်ရာတွင် အမှားအယွင်း ဖြစ်သွားပါပြီရှင်: {e}")
+        await msg.edit_text(f"❌ အမှားအယွင်း ဖြစ်ပေါ်သွားပါပြီ: {e}")
 
 async def cmd_stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context): return
@@ -440,7 +387,6 @@ async def cmd_warn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     key = (chat_id, user.id)
     user_warnings[key] = user_warnings.get(key, 0) + 1
     count = user_warnings[key]
-    
     await update.message.reply_text(f"⚠️ {user.first_name} ကို သတိပေးချက် ထုတ်ပြန်လိုက်ပါပြီ။ (စုစုပေါင်း: {count}/3)")
     if count >= 3:
         try:
@@ -482,7 +428,7 @@ async def cmd_dice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_dice(chat_id=update.effective_chat.id, emoji="🎲")
 
 async def cmd_about(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🤖 <b>Aoi Chan Bot v3.0</b>\nDeveloped with love for high-performance Telegram group management! 💕", parse_mode='HTML')
+    await update.message.reply_text("🤖 <b>Aoi Chan Bot v3.1</b>\nDeveloped with love for high-performance Telegram group management! 💕", parse_mode='HTML')
 
 # -------------------------------------------------------------------
 # Custom Filters & Admin Moderation Commands
@@ -539,11 +485,9 @@ async def cmd_kick(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_reaction_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reaction = update.message_reaction
     if not reaction: return
-    
     chat_id = reaction.chat.id
     settings = get_chat_settings(chat_id)
     if not settings.get('recdone', False): return
-
     user_id = reaction.user.id if reaction.user else None
     if user_id:
         try:
@@ -553,17 +497,11 @@ async def handle_reaction_events(update: Update, context: ContextTypes.DEFAULT_T
         except Exception as e:
             logging.error(f"Reaction admin check error: {e}")
             return
-
     if reaction.new_reaction:
         message_id = reaction.message_id
         done_text = settings.get('recdone_text', 'Order Completed! Thank you ❤️')
         try:
-            await context.bot.send_message(
-                chat_id=chat_id,
-                text=done_text,
-                reply_to_message_id=message_id,
-                parse_mode='HTML'
-            )
+            await context.bot.send_message(chat_id=chat_id, text=done_text, reply_to_message_id=message_id, parse_mode='HTML')
         except Exception as e:
             logging.error(f"Failed to send recdone reaction reply: {e}")
 
@@ -571,7 +509,6 @@ async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_T
     if not update.message or not update.message.text: return
     text = update.message.text.split()[0].lower()
     cmd_name = text.replace("/", "").split("@")[0]
-
     if cmd_name not in VALID_COMMANDS:
         girl_tone_msg = (
             f"ဟယ်... <code>/{cmd_name}</code> ဆိုတဲ့ Command လေးက မရှိသေးဘူးဖြစ်နေတယ်ရှင် 🥺\n\n"
@@ -586,17 +523,14 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
     settings = get_chat_settings(chat_id)
     text = update.message.text.strip()
     raw_text = text.lower()
-
     if text.startswith("/"):
         await handle_unknown_command(update, context)
         return
-
     user = update.effective_user
     if user:
         u_list = user_history.setdefault(user.id, [])
         u_list.append({'first_name': user.first_name, 'username': user.username or ''})
         if len(u_list) > 50: u_list.pop(0)
-
     if settings.get('permission', False) and await is_admin(update, context):
         if raw_text in ["open", "/open"]:
             await open_group(chat_id, context)
@@ -604,7 +538,6 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
         elif raw_text in ["closed", "close", "/closed"]:
             await close_group(chat_id, context)
             return
-
     if settings.get('linkblock', False) and not await is_admin(update, context):
         if "http://" in text or "https://" in text or "t.me" in text:
             try:
@@ -612,16 +545,13 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
             except Exception:
                 pass
             return
-
     if chat_id in custom_filters and raw_text in custom_filters[chat_id]:
         await update.message.reply_text(custom_filters[chat_id][raw_text], parse_mode='HTML')
         return
-
     chat_notes = user_notes.get(chat_id, {})
     if raw_text in chat_notes:
         await update.message.reply_text(chat_notes[raw_text], parse_mode='HTML')
         return
-
     if settings.get('calculator', True):
         if re.match(r'^[0-9\+\-\*\/\(\)\.\s]+$', text) and any(op in text for op in ['+', '-', '*', '/']):
             try:
@@ -644,15 +574,15 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = (
-        "<b>✨ Aoi Chan Complete Commands List ✨</b>\n\n"
+        "<b>✨ Aoi Chan Telegram API Commands List ✨</b>\n\n"
         "<b>🛡️ 1. Security & Protection</b>\n"
         "• <code>/forwardblock on/off</code> | <code>/linkblock on/off</code>\n"
         "• <code>/autoban on/off</code> | <code>/joineddelete on/off</code>\n\n"
         "<b>🏪 2. Group Management & Notes</b>\n"
         "• <code>/permission on/off</code> | <code>/note [title] [text]</code>\n"
         "• <code>/notes</code> | <code>/warn</code> | <code>/warnings</code>\n\n"
-        "<b>🎵 3. Music Voice Chat Player</b>\n"
-        "• <code>/play [Song/Link]</code> - သီချင်းစတင်ဖွင့်ရန်\n"
+        "<b>🎵 3. Telegram API Music Voice Chat</b>\n"
+        "• <code>/play (Reply to Telegram Audio)</code> - အသံဖိုင်ဖွင့်ရန်\n"
         "• <code>/stop</code> / <code>/skip</code> / <code>/queue</code>\n\n"
         "<b>🛍️ 4. Store & Orders</b>\n"
         "• <code>/recdone on/off</code> | <code>/setrecdone [Text]</code>\n"
@@ -668,28 +598,22 @@ def main():
     global pytgcalls
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # Handlers Setup
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
-    
     app.add_handler(CommandHandler("forwardblock", cmd_forwardblock))
     app.add_handler(CommandHandler("linkblock", cmd_linkblock))
     app.add_handler(CommandHandler("autoban", cmd_autoban))
     app.add_handler(CommandHandler("joineddelete", cmd_joineddelete))
-    
     app.add_handler(CommandHandler("track", cmd_track))
     app.add_handler(CommandHandler("check", cmd_check))
     app.add_handler(CommandHandler("info", cmd_info))
-    
     app.add_handler(CommandHandler("permission", cmd_permission))
     app.add_handler(CommandHandler("setopen", cmd_setopen))
     app.add_handler(CommandHandler("setclosed", cmd_setclosed))
-
     app.add_handler(CommandHandler("welcome", cmd_welcome))
     app.add_handler(CommandHandler("setwelcome", cmd_setwelcome))
     app.add_handler(CommandHandler("goodbye", cmd_goodbye))
     app.add_handler(CommandHandler("setgoodbye", cmd_setgoodbye))
-
     app.add_handler(CommandHandler("telegraph", cmd_telegraph))
     app.add_handler(CommandHandler("idcopytoggle", cmd_idcopy_toggle))
     app.add_handler(CommandHandler(["mlbb", "id", "idcopy"], cmd_idcopy_reply))
