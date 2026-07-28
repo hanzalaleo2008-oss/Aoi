@@ -5,7 +5,7 @@ import ast
 import operator
 import requests
 
-from telegram import Update, ChatPermissions
+from telegram import Update, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -463,18 +463,22 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
                 pass
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("မင်္ဂလာပါရှင်၊ Aoi Chan Bot မှ ကြိုဆိုပါတယ်! ✨\nCommands များကို /help တွင် ကြည့်နိုင်ပါတယ်ရှင်။")
-
-# -------------------------------------------------------------------
-# Help Menu (Telegraph Link - "click here")
-# -------------------------------------------------------------------
-async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = (
-        "<b>✨ Aoi Chan Bot Manual ✨</b>\n\n"
-        "Commands နှင့် အသုံးပြုပုံ အပြည့်အစုံကို အောက်ပါ link တွင် ကြည့်ရှုနိုင်ပါသည်ရှင်:\n"
-        '👉 <a href="https://telegra.ph/Aoi-Chan-Bot--Usage-Guide--Commands-Manual-07-26">click here</a>'
+    text = (
+        "မင်္ဂလာပါရှင်၊ Aoi Chan Bot မှ ကြိုဆိုပါတယ်! ✨\n\n"
+        "အသေးစိတ် Command များကို ကြည့်ရှုရန် /help ကို နှိပ်ပါရှင်။"
     )
-    await update.message.reply_text(help_text, parse_mode='HTML', disable_web_page_preview=False)
+    keyboard = [[InlineKeyboardButton("👉 [Click Here to View Manual]", url="https://telegra.ph/Aoi-Chan-Bot--Usage-Guide--Commands-Manual-07-26")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
+
+async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (
+        "<b>✨ Aoi Chan Bot - Command Manual ✨</b>\n\n"
+        "အသေးစိတ်အချက်အလက်များနှင့် Command များကို အောက်ပါခလုတ်မှတစ်ဆင့် ကြည့်ရှုနိုင်ပါသည်ရှင်:"
+    )
+    keyboard = [[InlineKeyboardButton("👉 [Click Here to View Manual]", url="https://telegra.ph/Aoi-Chan-Bot--Usage-Guide--Commands-Manual-07-26")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
 
 # -------------------------------------------------------------------
 # Main Setup & Application Builder
