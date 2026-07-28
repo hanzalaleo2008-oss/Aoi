@@ -545,6 +545,37 @@ async def cmd_kick(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.unban_chat_member(update.effective_chat.id, user.id)
         await update.message.reply_text(f"👞 {user.first_name} ကို Kick လိုက်ပါပြီရှင်။")
 
+async def handle_reaction_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    reaction = update.message_reaction
+    if not reaction: return
+    
+    chat_id = reaction.chat.id
+    settings = get_chat_settings(chat_id)
+    if not settings.get('recdone', False): return
+
+    user_id = reaction.user.id if reaction.user else None
+    if user_id:
+        try:
+            member = await context.bot.get_chat_member(chat_id, user_id)
+            if member.status not in ['creator', 'administrator']:
+                return
+        except Exception as e:
+            logging.error(f"Reaction admin check error: {e}")
+            return
+
+    if reaction.new_reaction:
+        message_id = reaction.message_id
+        done_text = settings.get('recdone_text', 'Order Completed! Thank you ❤️')
+        try:
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=done_text,
+                reply_to_message_id=message_id,
+                parse_mode='HTML'
+            )
+        except Exception as e:
+            logging.error(f"Failed to send recdone reaction reply: {e}")
+
 async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text: return
     text = update.message.text.split()[0].lower()
