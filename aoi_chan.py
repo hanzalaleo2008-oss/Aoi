@@ -35,6 +35,16 @@ PREMIUM_EMOJIS = {
     "crown": "5368324170671202288",
 }
 
+# Known Bot Commands List for Unknown Command Detection
+VALID_COMMANDS = {
+    "start", "help", "forwardblock", "linkblock", "autoban", "joineddelete",
+    "track", "check", "info", "permission", "setopen", "setclosed",
+    "welcome", "setwelcome", "goodbye", "setgoodbye", "telegraph",
+    "idcopytoggle", "mlbb", "id", "idcopy", "replydone", "recdone",
+    "setrecdone", "calculator", "setfilter", "deletefilter",
+    "ban", "unban", "mute", "kick"
+}
+
 def extract_premium_emoji_text(message) -> str:
     if not message or not message.text:
         return ""
@@ -416,6 +426,25 @@ async def handle_reaction_events(update: Update, context: ContextTypes.DEFAULT_T
             logging.error(f"Failed to send recdone reaction reply: {e}")
 
 # -------------------------------------------------------------------
+# Unknown Command Handler (Girl Tone Guidance)
+# -------------------------------------------------------------------
+async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+
+    text = update.message.text.split()[0].lower()
+    cmd_name = text.replace("/", "").split("@")[0]
+
+    # If it is not a recognized command
+    if cmd_name not in VALID_COMMANDS:
+        girl_tone_msg = (
+            f"ဟယ်... <code>/{cmd_name}</code> ဆိုတဲ့ Command လေးက မရှိသေးဘူးဖြစ်နေတယ်ရှင် 🥺\n\n"
+            f"Command ရိုက်တာ မှားသွားတာဖြစ်နိုင်ပါတယ်နော် ✨\n"
+            f"ရနိုင်တဲ့ Command လေးတွေကို ကြည့်ရှုချင်ရင်တော့ <b>/help</b> လေးကို နှိပ်ပြီး စစ်ဆေးပေးပါနော် 💕"
+        )
+        await update.message.reply_text(girl_tone_msg, parse_mode='HTML')
+
+# -------------------------------------------------------------------
 # General Message Handler
 # -------------------------------------------------------------------
 async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -424,6 +453,11 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
     settings = get_chat_settings(chat_id)
     text = update.message.text.strip()
     raw_text = text.lower()
+
+    # Catch unknown command typed as text
+    if text.startswith("/"):
+        await handle_unknown_command(update, context)
+        return
 
     user = update.effective_user
     if user:
@@ -465,20 +499,44 @@ async def handle_message_events(update: Update, context: ContextTypes.DEFAULT_TY
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         "မင်္ဂလာပါရှင်၊ Aoi Chan Bot မှ ကြိုဆိုပါတယ်! ✨\n\n"
-        "အသေးစိတ် Command များကို ကြည့်ရှုရန် /help ကို နှိပ်ပါရှင်။"
+        "စမ်းသပ်ချင်သည့် Command များကို ရိုက်နှိပ်၍ အသုံးပြုနိုင်ပါသည်။\n"
+        "အသေးစိတ် Command များကို ကြည့်ရှုရန် <b>/help</b> ကို နှိပ်ပါရှင်။"
     )
     keyboard = [[InlineKeyboardButton("👉 [Click Here to View Manual]", url="https://telegra.ph/Aoi-Chan-Bot--Usage-Guide--Commands-Manual-07-26")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
 
+# -------------------------------------------------------------------
+# Help Menu (Full Commands List with Examples + Telegraph Link)
+# -------------------------------------------------------------------
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (
-        "<b>✨ Aoi Chan Bot - Command Manual ✨</b>\n\n"
-        "အသေးစိတ်အချက်အလက်များနှင့် Command များကို အောက်ပါခလုတ်မှတစ်ဆင့် ကြည့်ရှုနိုင်ပါသည်ရှင်:"
+    help_text = (
+        "<b>✨ Aoi Chan Commands List ✨</b>\n\n"
+        "<b>🛡️ 1. Security & Protection</b>\n"
+        "• <code>/forwardblock on/off</code> - Forward စာများ ပိတ်/ဖွင့်\n"
+        "• <code>/linkblock on/off</code> - Link များ ပိတ်/ဖွင့်\n"
+        "• <code>/autoban on/off</code> - ထွက်သွားသူများကို Auto-Ban\n"
+        "• <code>/joineddelete on/off</code> - Joined စာများ ဖျက်ရန်\n\n"
+        "<b>🏪 2. Group Management</b>\n"
+        "• <code>/permission on/off</code> - Open/Closed စနစ် ပိတ်/ဖွင့်\n"
+        "• <code>/setopen [Text]</code> - Group ဖွင့်စာ ပြောင်းရန်\n"
+        "• <code>/setclosed [Text]</code> - Group ပိတ်စာ ပြောင်းရန်\n"
+        "• <code>/welcome on/off</code> - ကြိုဆိုစာ ပိတ်/ဖွင့်\n"
+        "• <code>/goodbye on/off</code> - နှုတ်ဆက်စာ ပိတ်/ဖွင့်\n\n"
+        "<b>🛍️ 3. Store & Orders</b>\n"
+        "• <code>/recdone on/off</code> - Reaction Auto Done စနစ်\n"
+        "• <code>/setrecdone [Text]</code> - Done Message ပြောင်းရန်\n"
+        "• <code>/idcopy (Reply msg)</code> - Game ID သီးသန့်ထုတ်ရန်\n"
+        "• <code>/calculator on/off</code> - Auto Math စနစ်\n\n"
+        "<b>⚙️ 4. Custom Filters & Admin tools</b>\n"
+        "• <code>/setfilter [key] [text]</code> - Keyword Filter မှတ်ရန်\n"
+        "• <code>/deletefilter [key]</code> - Filter ဖျက်ရန်\n"
+        "• <code>/ban, /unban, /mute, /kick</code> - Reply ပြန်၍ အသုံးပြုရန်\n"
+        "• <code>/info, /check, /track</code> - User အချက်အလက် ကြည့်ရန်"
     )
     keyboard = [[InlineKeyboardButton("👉 [Click Here to View Manual]", url="https://telegra.ph/Aoi-Chan-Bot--Usage-Guide--Commands-Manual-07-26")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
+    await update.message.reply_text(help_text, parse_mode='HTML', reply_markup=reply_markup)
 
 # -------------------------------------------------------------------
 # Main Setup & Application Builder
@@ -524,6 +582,7 @@ def main():
     app.add_handler(CommandHandler("kick", cmd_kick))
 
     app.add_handler(MessageReactionHandler(handle_reaction_events))
+    app.add_handler(MessageHandler(filters.COMMAND, handle_unknown_command))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message_events))
 
     app.run_polling(allowed_updates=["message", "edited_message", "message_reaction"])
