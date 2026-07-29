@@ -1,11 +1,21 @@
 import datetime as dt
+import logging
+import os
 import random
 import pytz
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-TOKEN = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
-CHAT_ID = "YOUR_CHAT_ID_HERE"
+# Railway Environment Variable (သို့မဟုတ် တိုက်ရိုက်ထည့်ရန်)
+TOKEN = os.getenv("TOKEN", "YOUR_NEW_TOKEN_HERE")
+CHAT_ID = os.getenv("CHAT_ID", "YOUR_CHAT_ID_HERE")
+
+# Logging သတ်မှတ်ခြင်း (Errors များကို ရှင်းလင်းစွာ သိရှိရန်)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
+logger = logging.getLogger(__name__)
 
 MYANMAR_QUOTES = [
     "အရမ်းကြိုးစားနေတာ ဂုဏ်ယူပါတယ်။ အောက်တိုဘာ/နိုဝင်ဘာ IGCSE မှာ A* ထွက်မှာပါ!",
@@ -78,18 +88,6 @@ TIMETABLE_MY = {
 }
 
 
-async def send_morning_message(context: ContextTypes.DEFAULT_TYPE):
-  current_day = dt.datetime.now(pytz.timezone("Asia/Yangon")).strftime("%A")
-  quote = random.choice(MYANMAR_QUOTES)
-  schedule_text = (
-      f"🌅 **မင်္ဂလာနံနက်ခင်းပါ! ထလို့ရပါပြီ!**\n💬 *{quote}*\n\n"
-      f"{TIMETABLE_MY.get(current_day, 'ဒီနေ့အတွက် အချိန်ဇယား မရှိသေးပါ။')}"
-  )
-  await context.bot.send_message(
-      chat_id=CHAT_ID, text=schedule_text, parse_mode="Markdown"
-  )
-
-
 async def today_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
   current_day = dt.datetime.now(pytz.timezone("Asia/Yangon")).strftime("%A")
   quote = random.choice(MYANMAR_QUOTES)
@@ -103,26 +101,24 @@ async def today_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
   chat_id = update.effective_chat.id
   await update.message.reply_text(
-      f"မင်္ဂလာပါ! Bot အလုပ်လုပ်နေပါပြီ။ သင့်ရဲ့ Chat ID မှာ: `{chat_id}` ဖြစ်ပါတယ်"
-      "။ အချိန်မရွေး /today လို့ ရိုက်ပြီး အချိန်ဇယားကို စစ်ဆေးနိုင်ပါတယ်။"
+      f"မင်္ဂလာပါ! Bot အလုပ်လုပ်နေပါပြီ။ သင့်ရဲ့ Chat ID မှာ: `{chat_id}` ဖြစ်ပါတယ်။"
   )
 
 
 def main():
+  # Token အမှန်ကို ထည့်ပါ သို့မဟုတ် Railway Variables မှာ သတ်မှတ်ပါ
+  if TOKEN == "YOUR_NEW_TOKEN_HERE":
+    print("Error: Please set your Telegram Bot Token!")
+    return
+
   app = ApplicationBuilder().token(TOKEN).build()
 
   app.add_handler(CommandHandler("start", start))
   app.add_handler(CommandHandler("today", today_command))
 
-  # မနက် ၇ နာရီတိတိတိုင်း အလိုအလျောက် ပို့ပေးမည့် အချိန်သတ်မှတ်ချက်
-  burma_tz = pytz.timezone("Asia/Yangon")
-  t = dt.time(hour=7, minute=0, second=0, tzinfo=burma_tz)
-
-  job_queue = app.job_queue
-  job_queue.run_daily(send_morning_message, time=t)
-
-  print("Bot is running...")
-  app.run_polling()
+  print("Bot is running smoothly...")
+  # railway မှာ ချို့ယွင်းချက်မရှိ အလုပ်လုပ်စေရန် drop_pending_updates=True ထည့်ထားခြင်း
+  app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
