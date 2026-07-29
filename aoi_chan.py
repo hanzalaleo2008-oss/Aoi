@@ -6,11 +6,11 @@ import pytz
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# Railway Environment Variable (သို့မဟုတ် တိုက်ရိုက်ထည့်ရန်)
+# Railway Environment Variables သို့မဟုတ် တိုက်ရိုက်ထည့်ရန်
 TOKEN = os.getenv("TOKEN", "YOUR_NEW_TOKEN_HERE")
 CHAT_ID = os.getenv("CHAT_ID", "YOUR_CHAT_ID_HERE")
 
-# Logging သတ်မှတ်ခြင်း (Errors များကို ရှင်းလင်းစွာ သိရှိရန်)
+# Errors များကို စောင့်ကြည့်ရန် Logging သတ်မှတ်ခြင်း
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
@@ -106,19 +106,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main():
-  # Token အမှန်ကို ထည့်ပါ သို့မဟုတ် Railway Variables မှာ သတ်မှတ်ပါ
-  if TOKEN == "YOUR_NEW_TOKEN_HERE":
-    print("Error: Please set your Telegram Bot Token!")
-    return
-
-  app = ApplicationBuilder().token(TOKEN).build()
+  # Telegram Application တည်ဆောက်ခြင်း (Connection timeout များကို တိုးမြှင့်ထားသည်)
+  app = (
+      ApplicationBuilder()
+      .token(TOKEN)
+      .connect_timeout(30.0)
+      .read_timeout(30.0)
+      .write_timeout(30.0)
+      .build()
+  )
 
   app.add_handler(CommandHandler("start", start))
   app.add_handler(CommandHandler("today", today_command))
 
-  print("Bot is running smoothly...")
-  # railway မှာ ချို့ယွင်းချက်မရှိ အလုပ်လုပ်စေရန် drop_pending_updates=True ထည့်ထားခြင်း
-  app.run_polling(drop_pending_updates=True)
+  print("Bot is starting with stable connection...")
+  # Network error တက်ပါက အလိုအလျောက် ပြန်ချိတ်ဆက်ပေးရန် drop_pending_updates=True သုံးထားသည်
+  app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
