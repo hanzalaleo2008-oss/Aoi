@@ -7,8 +7,8 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # Railway Environment Variables သို့မဟုတ် တိုက်ရိုက်ထည့်ရန်
-TOKEN = os.getenv("TOKEN", "YOUR_NEW_TOKEN_HERE")
-CHAT_ID = os.getenv("CHAT_ID", "YOUR_CHAT_ID_HERE")
+TOKEN = os.getenv("TOKEN", "8884160612:AAEXBlgw8coEtH3GsxIew9368RMfcbatATI")
+CHAT_ID = os.getenv("CHAT_ID", "7291770711")
 
 # Errors များကို စောင့်ကြည့်ရန် Logging သတ်မှတ်ခြင်း
 logging.basicConfig(
